@@ -1,22 +1,3 @@
-export type RegionName =
-  | 'topLeft'
-  | 'topRight'
-  | 'bottomLeft'
-  | 'bottomRight'
-  | 'top'
-  | 'bottom'
-  | 'left'
-  | 'right'
-  | 'center';
-
-export interface SliceRegion {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  file: string;
-}
-
 export interface HalfDefinition {
   origin: {
     x: number;
@@ -27,17 +8,11 @@ export interface HalfDefinition {
     width: number;
     height: number;
   };
-  regions: Record<RegionName, SliceRegion>;
+  file: string;
 }
 
 export interface StyleDefinition {
   id: string;
-  viewBox: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
   height: number;
   padding: number;
   minHalfWidth: number;
