@@ -197,6 +197,7 @@ git commit -m "feat: add opentype text shaping"
 - output starts with `<svg` and has `width="240" height="181"` for empty text at min width;
 - count of `viewBox="251 30 40 40"` fragments (top-left corner) is exactly 1;
 - for text long enough that `halfWidth > 120`, the top-edge parent viewport contains `tileSpan(spanW, 229)` child tiles and **no** `scale(` substring in the output;
+- for empty text (half width 120), left top-right corner nested `<svg>` has `x="80"`, right top-left has `x="120"`, right top-right has `x="200"`, and no corner is placed beyond the badge width;
 - output contains `<path` for both texts;
 - two calls with identical inputs produce identical strings.
 
@@ -207,7 +208,7 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement**
 
-Per half: `cornerW = half.corner.width`, `cornerH = half.corner.height`, `spanW = halfWidth - 2*cornerW`, `spanH = style.height - 2*cornerH`, `halfWidth = Math.max(style.minHalfWidth, 2*cornerW + textWidth + 2*style.padding)`. Render 4 corners as one nested `<svg x y width height viewBox="srcX srcY w h">fragment</svg>` each. Render each elastic region as a parent nested `<svg x y width=span viewBox="0 0 spanW spanH">` containing exactly `tileSpan(span, tile)` child nested `<svg x={i*tileW} y={j*tileH} width={tileW} height={tileH} viewBox="srcX srcY tileW tileH">fragment</svg>` (one axis for edges, both for center). Destination x = `halfOffsetX + region.x - half.origin.x`, y = `region.y - style.viewBox.y`. Place both halves' backgrounds first, then text paths: `x = cornerW + style.padding + (spanW - 2*style.padding - textWidth)/2 + halfOffsetX`, `baselineY = cornerH + spanH/2 + (ascenderPx + descenderPx)/2`. Text path wrapped in `<path d="..." transform="translate(x, baselineY)" fill="..."/>`.
+Per half: `cornerW = half.corner.width`, `cornerH = half.corner.height`, `spanW = halfWidth - 2*cornerW`, `spanH = style.height - 2*cornerH`, `halfWidth = Math.max(style.minHalfWidth, 2*cornerW + textWidth + 2*style.padding)`. Corners are native-size nested `<svg x y width height viewBox="srcX srcY w h">fragment</svg>` placed at the half's edges, NOT at source-relative offsets: `topLeft`/`bottomLeft` x = `halfOffsetX`, `topRight`/`bottomRight` x = `halfOffsetX + halfWidth - cornerW`; `top*` y = `region.y - style.viewBox.y`, `bottom*` y = `style.height - cornerH`. Elastic regions are parent nested `<svg x y width height viewBox="0 0 width height">` whose viewport equals its viewBox on both axes (no scaling): top/bottom `x = halfOffsetX + cornerW`, `y = region.y - style.viewBox.y`, `width = spanW`, `height = cornerH`; left/right `x = halfOffsetX`, `y = cornerH`, `width = cornerW`, `height = spanH`; center `x = halfOffsetX + cornerW`, `y = cornerH`, `width = spanW`, `height = spanH`. Each contains exactly `tileSpan(viewportWidth, tile.width) * tileSpan(viewportHeight, tile.height)` child nested `<svg x y width height viewBox="srcX srcY tileW tileH">fragment</svg>` tiles (one axis for edges, both for center). Place both halves' backgrounds first, then text paths: `x = cornerW + style.padding + (spanW - 2*style.padding - textWidth)/2 + halfOffsetX`, `baselineY = cornerH + spanH/2 + (ascenderPx + descenderPx)/2`. Text path wrapped in `<path d="..." transform="translate(x, baselineY)" fill="..."/>`.
 
 - [ ] **Step 4: Run to verify it passes**
 
