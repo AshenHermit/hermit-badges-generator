@@ -34,10 +34,12 @@ const REQUIRED_CSS = [
   },
 ];
 
+const canonicalFont = path.join(root, 'assets', 'fonts', 'Lipstick-Rage.ttf');
+
 const REQUIRED_ASSETS = [
   path.join(templateDir, 'left-half.svg'),
   path.join(templateDir, 'right-half.svg'),
-  path.join(root, 'assets', 'fonts', 'Lipstick-Rage.ttf'),
+  canonicalFont,
 ];
 
 let failures = 0;
@@ -76,6 +78,23 @@ for (const asset of REQUIRED_ASSETS) {
   }
   if (fs.statSync(asset).size === 0) {
     fail(`asset is empty: ${rel(asset)}`);
+  }
+}
+
+// Existence of the font is not enough: the template's @font-face URL must
+// resolve to that same canonical file from the template directory.
+const fontFace = template.match(/@font-face\s*\{[^}]*\}/)?.[0];
+if (!fontFace) {
+  fail('@font-face block missing from template');
+} else {
+  const fontUrl = fontFace.match(/url\(\s*["']?([^"')]+)["']?\s*\)/)?.[1];
+  if (!fontUrl) {
+    fail('@font-face src url missing');
+  } else {
+    const resolvedFont = path.resolve(templateDir, fontUrl);
+    if (resolvedFont !== canonicalFont) {
+      fail(`@font-face src resolves to ${rel(resolvedFont)}, expected ${rel(canonicalFont)}`);
+    }
   }
 }
 
