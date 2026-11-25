@@ -85,6 +85,67 @@ describe('BadgeComposer', () => {
     expect(Math.max(...cornerXs)).toBeLessThanOrEqual(width);
   });
 
+  interface Viewport {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }
+
+  function elasticViewports(output: string): Viewport[] {
+    return [
+      ...output.matchAll(
+        /<svg x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.-]+)" height="([\d.-]+)" viewBox="0 0 [\d.-]+ [\d.-]+">/g,
+      ),
+    ].map((match) => ({
+      x: Number(match[1]),
+      y: Number(match[2]),
+      width: Number(match[3]),
+      height: Number(match[4]),
+    }));
+  }
+
+  it('pins all elastic band x positions for empty text, leaving no vertical band uncovered', () => {
+    const output = BadgeComposer.compose(style, '', '');
+    const viewports = elasticViewports(output);
+    const cornerW = style.halves.left.corner.width;
+    const cornerH = style.halves.left.corner.height;
+    const halfWidth = style.minHalfWidth;
+    const spanW = halfWidth - 2 * cornerW;
+    const spanH = style.height - 2 * cornerH;
+    const expected: Viewport[] = [
+      { x: cornerW, y: 0, width: spanW, height: cornerH }, // left top
+      { x: 0, y: cornerH, width: cornerW, height: spanH }, // left edge
+      { x: cornerW, y: cornerH, width: spanW, height: spanH }, // left center
+      { x: halfWidth - cornerW, y: cornerH, width: cornerW, height: spanH }, // left right edge
+      { x: cornerW, y: style.height - cornerH, width: spanW, height: cornerH }, // left bottom
+      { x: halfWidth + cornerW, y: 0, width: spanW, height: cornerH }, // right top
+      { x: halfWidth, y: cornerH, width: cornerW, height: spanH }, // right edge
+      { x: halfWidth + cornerW, y: cornerH, width: spanW, height: spanH }, // right center
+      { x: 2 * halfWidth - cornerW, y: cornerH, width: cornerW, height: spanH }, // right right edge
+      { x: halfWidth + cornerW, y: style.height - cornerH, width: spanW, height: cornerH }, // right bottom
+    ];
+    expect(viewports).toEqual(expected);
+    expect(viewports[1].x).toBe(0);
+    expect(viewports[8].x).toBe(200);
+  });
+
+  it('tracks each half width when placing the right vertical band', () => {
+    const leftText = 'Hello';
+    const rightText = 'World';
+    const output = BadgeComposer.compose(style, leftText, rightText);
+    const viewports = elasticViewports(output);
+    const cornerW = style.halves.left.corner.width;
+    const halfWidth = (text: string): number =>
+      Math.max(style.minHalfWidth, 2 * cornerW + TextShaper.layout(text, font).width + 2 * style.padding);
+    const leftHalfWidth = halfWidth(leftText);
+    const rightHalfWidth = halfWidth(rightText);
+    expect(viewports.length).toBe(10);
+    expect(viewports[3].x).toBe(leftHalfWidth - cornerW);
+    expect(viewports[6].x).toBe(leftHalfWidth);
+    expect(viewports[8].x).toBe(leftHalfWidth + rightHalfWidth - cornerW);
+  });
+
   it('emits a text path for both texts', () => {
     const output = BadgeComposer.compose(style, 'left text', 'right text');
     expect((output.match(/<path/g) || []).length).toBeGreaterThanOrEqual(2);

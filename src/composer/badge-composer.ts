@@ -52,6 +52,7 @@ function renderElastic(
   cornerW: number,
   spanW: number,
   spanH: number,
+  halfWidthPx: number,
   halfOffsetX: number,
 ): string {
   const cornerH = half.corner.height;
@@ -65,7 +66,7 @@ function renderElastic(
     vpW = spanW;
     vpH = cornerH;
   } else if (name === 'left' || name === 'right') {
-    vpX = halfOffsetX;
+    vpX = name === 'right' ? halfOffsetX + halfWidthPx - cornerW : halfOffsetX;
     vpY = cornerH;
     vpW = cornerW;
     vpH = spanH;
@@ -118,7 +119,7 @@ function renderHalf(
       parts.push(renderCorner(style, region, x, y));
     } else {
       parts.push(
-        renderElastic(style, half, name, region, cornerW, spanW, spanH, halfOffsetX),
+        renderElastic(style, half, name, region, cornerW, spanW, spanH, halfWidthPx, halfOffsetX),
       );
     }
   }
