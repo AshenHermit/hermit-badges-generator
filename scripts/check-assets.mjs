@@ -10,6 +10,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const templateDir = path.join(root, 'assets', 'templates', 'hermit-frame');
 const manifestPath = path.join(templateDir, 'manifest.json');
 
+const EXPECTED_BORDER_SIDES = { top: 40, right: 40, bottom: 40, left: 40 };
+const EXPECTED_PADDING_SIDES = { top: 12, right: 12, bottom: 12, left: 12 };
 const EXPECTED_HALVES = {
   left: { file: 'left-half.svg', viewBox: '251 30 309 181' },
   right: { file: 'right-half.svg', viewBox: '560 30 309 181' },
@@ -19,6 +21,15 @@ let failures = 0;
 const fail = (msg) => {
   failures += 1;
   console.error(`FAIL: ${msg}`);
+};
+
+const checkSides = (label, actual, expected) => {
+  const keys = Object.keys(expected);
+  if (!actual || typeof actual !== 'object'
+    || Object.keys(actual).length !== keys.length
+    || keys.some((key) => actual[key] !== expected[key])) {
+    fail(`${label} is ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`);
+  }
 };
 
 const rel = (p) => path.relative(root, p);
@@ -42,9 +53,9 @@ if (manifest.id !== 'hermit-frame') {
 if (manifest.height !== 181) {
   fail(`manifest height is ${JSON.stringify(manifest.height)}, expected 181`);
 }
-if (manifest.padding !== 12) {
-  fail(`manifest padding is ${JSON.stringify(manifest.padding)}, expected 12`);
-}
+checkSides('manifest.border.slice', manifest.border?.slice, EXPECTED_BORDER_SIDES);
+checkSides('manifest.border.width', manifest.border?.width, EXPECTED_BORDER_SIDES);
+checkSides('manifest.padding', manifest.padding, EXPECTED_PADDING_SIDES);
 if (manifest.minHalfWidth !== 309) {
   fail(`manifest minHalfWidth is ${JSON.stringify(manifest.minHalfWidth)}, expected 309`);
 }
@@ -53,6 +64,11 @@ if (manifest.font?.size !== 50) {
 }
 
 const halves = manifest.halves || {};
+for (const [side, half] of Object.entries(halves)) {
+  if (half && typeof half === 'object' && 'corner' in half) {
+    fail(`halves.${side}.corner is stale; manifest must describe four-sided border only`);
+  }
+}
 for (const [side, expected] of Object.entries(EXPECTED_HALVES)) {
   const half = halves[side];
   if (!half) {

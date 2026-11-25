@@ -11,11 +11,17 @@ import { GenerateQueryDto } from './dto/generate-query.dto';
 export class GenerationService {
   private static readonly ENDPOINT = '/api/v1/generate';
 
+  private readonly freshManifest: boolean;
+
   constructor(
     private readonly styleRegistry: StyleRegistry,
     @Inject(MemoryCacheService) private readonly badgeCache: BadgeCache,
     private readonly rendererRegistry: RendererRegistry,
-  ) {}
+  ) {
+    this.freshManifest = ['1', 'true', 'yes'].includes(
+      (process.env.FRESH_MANIFEST ?? '').trim().toLowerCase(),
+    );
+  }
 
   async generate(query: GenerateQueryDto): Promise<Buffer> {
     const key = CacheKeyFactory.create(GenerationService.ENDPOINT, {
@@ -25,15 +31,19 @@ export class GenerationService {
       format: query.format,
     });
 
-    const cached = this.badgeCache.get(key);
-    if (cached) {
-      return cached;
+    if (!this.freshManifest) {
+      const cached = this.badgeCache.get(key);
+      if (cached) {
+        return cached;
+      }
     }
 
     const style = this.styleRegistry.get(query.style);
     const svg = BadgeComposer.compose(style, query.left, query.right);
     const png = await this.rendererRegistry.get(query.format).render(svg);
-    this.badgeCache.set(key, png);
+    if (!this.freshManifest) {
+      this.badgeCache.set(key, png);
+    }
     return png;
   }
 }

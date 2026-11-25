@@ -82,4 +82,25 @@ describe('GenerationService', () => {
     expect(renderer.render).not.toHaveBeenCalled();
     expect(badgeCache.set).not.toHaveBeenCalled();
   });
+
+  it('bypasses the response cache when FRESH_MANIFEST is set', async () => {
+    const previous = process.env.FRESH_MANIFEST;
+    process.env.FRESH_MANIFEST = '1';
+    badgeCache.get.mockReturnValue(PNG);
+    try {
+      const freshService = new GenerationService(
+        styleRegistry as unknown as StyleRegistry,
+        badgeCache as unknown as BadgeCache,
+        rendererRegistry as unknown as RendererRegistry,
+      );
+      await freshService.generate(queryWith());
+      expect(badgeCache.get).not.toHaveBeenCalled();
+      expect(styleRegistry.get).toHaveBeenCalledWith('hermit-frame');
+      expect(renderer.render).toHaveBeenCalledWith(SVG);
+      expect(badgeCache.set).not.toHaveBeenCalled();
+    } finally {
+      if (previous === undefined) delete process.env.FRESH_MANIFEST;
+      else process.env.FRESH_MANIFEST = previous;
+    }
+  });
 });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Builds the hermit-frame manifest and the two whole-half SVG images
-// from the root badge_frame.svg.
+// from source.svg.
 // Run via: npm run assets:build
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,12 +13,12 @@ const manifestPath = path.join(templateDir, 'manifest.json');
 
 // Constants per the frame spec.
 const HEIGHT = 181;
-const PADDING = 12;
+const BORDER_SIDES = { top: 40, right: 40, bottom: 40, left: 40 };
+const PADDING_SIDES = { top: 12, right: 12, bottom: 12, left: 12 };
 const MIN_HALF_WIDTH = 309;
 const FONT = { file: 'Mansalva-Regular.ttf', size: 50, color: '#ffffff' };
 const HALF_ORIGINS = { left: { x: 251, y: 30 }, right: { x: 560, y: 30 } };
 const HALF_WIDTH = 309;
-const CORNER = { width: 40, height: 40 };
 
 function stripToFragment(source) {
   // Strip the XML declaration, DOCTYPE, outer <svg> and </svg>; keep the inner content.
@@ -42,7 +42,6 @@ function main() {
     halves[side] = {
       origin: { ...origin },
       width: HALF_WIDTH,
-      corner: { ...CORNER },
       file: `${side}-half.svg`,
     };
   }
@@ -50,7 +49,11 @@ function main() {
   const manifest = {
     id: 'hermit-frame',
     height: HEIGHT,
-    padding: PADDING,
+    border: {
+      slice: { ...BORDER_SIDES },
+      width: { ...BORDER_SIDES },
+    },
+    padding: { ...PADDING_SIDES },
     minHalfWidth: MIN_HALF_WIDTH,
     font: { ...FONT },
     halves,

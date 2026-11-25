@@ -32,6 +32,8 @@ The server listens on port `3000` by default. Override it with the `PORT` enviro
 
 Set `CACHE_DISABLED=true` to disable caching: no result is stored and every request is rendered again. Accepted values are `1`, `true`, and `yes` (case-insensitive). The variable is read at startup, so restart the app after changing it.
 
+Set `FRESH_MANIFEST=true` to re-read and validate `assets/templates/<style>/manifest.json` on every generation and bypass cached PNGs, so manifest edits take effect without restarting or clearing the cache. Accepted values are `1`, `true`, and `yes` (case-insensitive). The variable is read at startup, so restart the app after changing it.
+
 ## Generate a badge
 
 ```bash
