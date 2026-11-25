@@ -1,20 +1,27 @@
+export interface Sides {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 export interface HalfDefinition {
   origin: {
     x: number;
     y: number;
   };
   width: number;
-  corner: {
-    width: number;
-    height: number;
-  };
   file: string;
 }
 
 export interface StyleDefinition {
   id: string;
   height: number;
-  padding: number;
+  border: {
+    slice: Sides;
+    width: Sides;
+  };
+  padding: Sides;
   minHalfWidth: number;
   font: {
     file: string;
