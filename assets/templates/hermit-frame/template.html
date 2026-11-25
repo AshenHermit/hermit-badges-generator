@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hermit frame badge</title>
+<style>
+@font-face {
+  font-family: "Lipstick Rage";
+  src: url("../fonts/Lipstick-Rage.ttf") format("truetype");
+}
+
+body {
+  margin: 0;
+  color: #e8e6df;
+  line-height:1.625;
+  font-size: 50px;
+}
+
+.github-badge { font-family: "Lipstick Rage", sans-serif; --panel-face: #808080; }
+
+.github-badge { display:flex; width:fit-content; box-sizing:border-box; }
+
+.badge-left-part { border-image: url("./left-half.svg") 66 10 48 53 fill / 66px 10px 48px 53px repeat; padding: 49px 20px 41px 53px; }
+
+.badge-right-part { border-image: url("./right-half.svg") 66 53 48 25 fill / 66px 53px 48px 25px repeat; padding: 49px 68px 41px 35px; }
+</style>
+</head>
+<body><div class="github-badge"><div class="badge-left-part">{{LEFT}}</div><div class="badge-right-part">{{RIGHT}}</div></div></body>
+</html>
