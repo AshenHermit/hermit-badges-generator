@@ -223,4 +223,14 @@ describe('BadgeComposer', () => {
     expect(patterns[0]).toContain('x="0" y="0"');
     expect(patterns[1]).toContain('x="-289" y="0"');
   });
+
+  it('emits no negative width or height on patterns or rects for valid asymmetric sides', () => {
+    const svg = BadgeComposer.compose(asymmetric, 'A', 'B');
+    const tags = [...svg.matchAll(/<(?:pattern|rect)\b[^>]*>/g)].map(([tag]) => tag);
+    expect(tags).toHaveLength(36);
+    for (const tag of tags) {
+      expect(Number(attr(tag, 'width'))).toBeGreaterThan(0);
+      expect(Number(attr(tag, 'height'))).toBeGreaterThan(0);
+    }
+  });
 });

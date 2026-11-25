@@ -4,6 +4,39 @@ import { StyleRegistry } from './style.registry';
 
 const MANIFEST_PATH = path.resolve(process.cwd(), 'assets/templates/hermit-frame/manifest.json');
 
+type MutableManifest = {
+  border: {
+    slice: Record<string, number>;
+    width: Record<string, number>;
+  };
+};
+
+function withMutatedSides(edit: (manifest: MutableManifest) => void, check: () => void): void {
+  const original = fs.readFileSync(MANIFEST_PATH, 'utf8');
+  try {
+    const manifest = JSON.parse(original) as MutableManifest;
+    edit(manifest);
+    fs.writeFileSync(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
+    check();
+  } finally {
+    fs.writeFileSync(MANIFEST_PATH, original);
+  }
+}
+
+function expectThrowNaming(action: () => unknown, ...paths: string[]): void {
+  let error: unknown;
+  try {
+    action();
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error).toBeInstanceOf(Error);
+  const message = error instanceof Error ? error.message : String(error);
+  for (const fieldPath of paths) {
+    expect(message).toContain(fieldPath);
+  }
+}
+
 describe('StyleRegistry', () => {
   const registry = new StyleRegistry();
 
@@ -63,5 +96,53 @@ describe('StyleRegistry', () => {
       if (previous === undefined) delete process.env.FRESH_MANIFEST;
       else process.env.FRESH_MANIFEST = previous;
     }
+  });
+
+  it('rejects slice top/bottom whose sum exceeds the source height', () => {
+    withMutatedSides(
+      (manifest) => {
+        manifest.border.slice.top = 100;
+        manifest.border.slice.bottom = 100;
+      },
+      () => {
+        expectThrowNaming(
+          () => new StyleRegistry(),
+          'border.slice.top',
+          'border.slice.bottom',
+        );
+      },
+    );
+  });
+
+  it('rejects slice left/right whose sum exceeds a half width', () => {
+    withMutatedSides(
+      (manifest) => {
+        manifest.border.slice.left = 200;
+        manifest.border.slice.right = 200;
+      },
+      () => {
+        expectThrowNaming(
+          () => new StyleRegistry(),
+          'border.slice.left',
+          'border.slice.right',
+        );
+      },
+    );
+  });
+
+  it('rejects width top/bottom whose sum exceeds the source height', () => {
+    withMutatedSides(
+      (manifest) => {
+        manifest.border.width.top = 100;
+        manifest.border.width.bottom = 100;
+      },
+      () => {
+        expectThrowNaming(
+          () => new StyleRegistry(),
+          'border.width.top',
+          'border.width.bottom',
+        );
+      },
+    );
   });
 });

@@ -34,7 +34,38 @@ export class StyleRegistry {
       width: this.readSides(rawBorder?.width, 'border.width'),
     };
     definition.padding = this.readSides(definition.padding, 'padding');
+
+    const { slice, width } = definition.border;
+    this.checkSpan(
+      slice.top + slice.bottom,
+      'border.slice.top',
+      'border.slice.bottom',
+      'height',
+      definition.height,
+    );
+    for (const [side, half] of Object.entries(definition.halves)) {
+      this.checkSpan(
+        slice.left + slice.right,
+        'border.slice.left',
+        'border.slice.right',
+        `halves.${side}.width`,
+        half.width,
+      );
+    }
+    this.checkSpan(
+      width.top + width.bottom,
+      'border.width.top',
+      'border.width.bottom',
+      'height',
+      definition.height,
+    );
     return definition;
+  }
+
+  private checkSpan(sum: number, first: string, second: string, limitLabel: string, limit: number): void {
+    if (sum > limit) {
+      throw new Error(`Invalid ${first} + ${second}: sum ${sum} exceeds ${limitLabel} ${limit}`);
+    }
   }
 
   private readSides(raw: unknown, label: string): Sides {
