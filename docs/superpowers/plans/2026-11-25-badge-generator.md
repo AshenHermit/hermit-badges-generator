@@ -52,7 +52,7 @@ Expected: FAIL — modules do not exist.
 
 - [ ] **Step 3: Create project files**
 
-`package.json` scripts: `build`, `start`, `start:dev`, `assets:build` (`node scripts/build-slices.mjs`), `test` (`jest`), `test:e2e` (`jest --config test/jest-e2e.json --runInBand`). Dependencies exactly: `@nestjs/common@^11`, `@nestjs/core@^11`, `@nestjs/platform-express@^11`, `@nestjs/config@^4`, `@nestjs/swagger@^11`, `reflect-metadata@^0.2`, `rxjs@^7.8`, `@resvg/resvg-js@^2.6`, `opentype.js@^1.3`. Dev: `@nestjs/cli@^11`, `@nestjs/testing@^11`, `@types/jest@^29`, `@types/node@^22`, `@types/opentype.js@^1.3`, `@types/supertest@^6`, `jest@^29`, `ts-jest@^29`, `supertest@^7`, `typescript@^5`. `tsconfig.json`: CommonJS, target ES2022, `experimentalDecorators`, `emitDecoratorMetadata`, `esModuleInterop`, `strict`. `AppModule` imports `ConfigModule.forRoot({ isGlobal: true })` only (other modules added later). `.gitignore`: `node_modules/`, `dist/`, `coverage/`, `*.log`.
+`package.json` scripts: `build`, `start`, `start:dev`, `assets:build` (`node scripts/build-slices.mjs`), `test` (`jest`), `test:e2e` (`jest --config test/jest-e2e.json --runInBand`). Dependencies exactly: `@nestjs/common@^11`, `@nestjs/core@^11`, `@nestjs/platform-express@^11`, `@nestjs/config@^4`, `@nestjs/swagger@^11`, `reflect-metadata@^0.2`, `rxjs@^7.8`, `@resvg/resvg-js@^2.6`, `opentype.js@^1.3`. Dev: `@nestjs/cli@^11`, `@nestjs/testing@^11`, `@types/jest@^29`, `@types/node@^22`, `@types/opentype.js@^1.3`, `@types/supertest@^6`, `jest@^29`, `ts-jest@^29`, `supertest@^7`, `typescript@^5`. `tsconfig.json`: CommonJS, target ES2022, `experimentalDecorators`, `emitDecoratorMetadata`, `esModuleInterop`, `strict`. `jest.config.js`: `preset: 'ts-jest'`, `testEnvironment: 'node'`, `roots: ['<rootDir>/src']`, `testRegex: '\\.spec\\.ts$'`. `test/jest-e2e.json`: `preset: 'ts-jest'`, `testEnvironment: 'node'`, `rootDir: '..'`, `testRegex: 'test/.*\\.e2e-spec\\.ts$'` (so `test/helpers/create-app.ts` is not treated as a test). `AppModule` imports `ConfigModule.forRoot({ isGlobal: true })` only (other modules added later). `.gitignore` already exists at repo root (do not overwrite).
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -297,7 +297,7 @@ git commit -m "feat: add deterministic cache key and memory cache"
 
 **Files:**
 - Create: `src/generation/dto/generate-query.dto.ts`, `src/generation/generation.service.ts`, `src/generation/generation.controller.ts`, `src/generation/generation.module.ts`, `src/generation/generation.service.spec.ts`, `test/generate.e2e-spec.ts`
-- Modify: `src/app.module.ts`, `src/app.setup.ts`
+- Modify: `src/app.module.ts`
 
 **Interfaces:**
 - Consumes: everything from Tasks 3–7.
