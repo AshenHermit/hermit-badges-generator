@@ -49,4 +49,19 @@ describe('StyleRegistry', () => {
       fs.writeFileSync(MANIFEST_PATH, original);
     }
   });
+
+  it('re-reads the manifest on get when FRESH_MANIFEST is true', () => {
+    const previous = process.env.FRESH_MANIFEST;
+    const original = fs.readFileSync(MANIFEST_PATH, 'utf8');
+    try {
+      process.env.FRESH_MANIFEST = 'true';
+      const freshRegistry = new StyleRegistry();
+      fs.writeFileSync(MANIFEST_PATH, original.replace('"size": 50', '"size": 51'));
+      expect(freshRegistry.get('hermit-frame').font.size).toBe(51);
+    } finally {
+      fs.writeFileSync(MANIFEST_PATH, original);
+      if (previous === undefined) delete process.env.FRESH_MANIFEST;
+      else process.env.FRESH_MANIFEST = previous;
+    }
+  });
 });

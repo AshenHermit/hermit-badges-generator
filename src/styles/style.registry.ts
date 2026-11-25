@@ -10,8 +10,12 @@ const SIDE_KEYS = ['top', 'right', 'bottom', 'left'] as const;
 @Injectable()
 export class StyleRegistry {
   private readonly styles = new Map<string, StyleDefinition>();
+  private readonly fresh: boolean;
 
   constructor() {
+    this.fresh = ['1', 'true', 'yes'].includes(
+      (process.env.FRESH_MANIFEST ?? '').trim().toLowerCase(),
+    );
     for (const entry of fs.readdirSync(TEMPLATES_DIR, { withFileTypes: true })) {
       if (!entry.isDirectory() || !STYLE_ID_PATTERN.test(entry.name)) {
         continue;
@@ -61,6 +65,6 @@ export class StyleRegistry {
     if (!definition) {
       throw new Error(`Unknown style: ${id}`);
     }
-    return definition;
+    return this.fresh ? this.readDefinition(id) : definition;
   }
 }
