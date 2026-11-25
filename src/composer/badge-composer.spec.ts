@@ -47,13 +47,42 @@ describe('BadgeComposer', () => {
     const spanW = halfWidth - 2 * cornerW;
     const output = BadgeComposer.compose(style, longText, 'right');
     const parentMatch = output.match(
-      /<svg x="[\d.-]+" y="[\d.-]+" width="[\d.-]+" viewBox="0 0 [\d.]+ [\d.]+">/,
+      /<svg x="[\d.-]+" y="[\d.-]+" width="[\d.-]+" height="[\d.-]+" viewBox="0 0 [\d.]+ [\d.]+">/,
     );
     expect(parentMatch).not.toBeNull();
     const inner = extractElementInner(output, (parentMatch?.index ?? -1) + (parentMatch?.[0].length ?? 0));
     const tiles = inner.match(/<svg /g);
     expect(tiles?.length).toBe(tileSpan(spanW, style.halves.left.regions.top.width));
     expect(output).not.toContain('scale(');
+  });
+
+  it('anchors corners at the half edges and keeps them within the badge width', () => {
+    const output = BadgeComposer.compose(style, '', '');
+    const left = style.halves.left;
+    const right = style.halves.right;
+    const leftHalfWidth = Math.max(style.minHalfWidth, 2 * left.corner.width + 0 + 2 * style.padding);
+    const width =
+      leftHalfWidth + Math.max(style.minHalfWidth, 2 * right.corner.width + 0 + 2 * style.padding);
+    expect(width).toBe(240);
+    const leftTR = left.regions.topRight;
+    expect(output).toContain(
+      `<svg x="${leftHalfWidth - left.corner.width}" y="0" width="${leftTR.width}" height="${leftTR.height}" viewBox="${leftTR.x} ${leftTR.y} ${leftTR.width} ${leftTR.height}">`,
+    );
+    const rightTL = right.regions.topLeft;
+    expect(output).toContain(
+      `<svg x="${leftHalfWidth}" y="0" width="${rightTL.width}" height="${rightTL.height}" viewBox="${rightTL.x} ${rightTL.y} ${rightTL.width} ${rightTL.height}">`,
+    );
+    const rightTR = right.regions.topRight;
+    expect(output).toContain(
+      `<svg x="${leftHalfWidth + leftHalfWidth - left.corner.width}" y="0" width="${rightTR.width}" height="${rightTR.height}" viewBox="${rightTR.x} ${rightTR.y} ${rightTR.width} ${rightTR.height}">`,
+    );
+    const cornerXs = [
+      ...output.matchAll(
+        /<svg x="([\d.]+)" y="[\d.]+" width="[\d.]+" height="[\d.]+" viewBox="(?!0 0)\d+ \d+ \d+ \d+">/g,
+      ),
+    ].map((m) => Number(m[1]));
+    expect(cornerXs.length).toBeGreaterThan(0);
+    expect(Math.max(...cornerXs)).toBeLessThanOrEqual(width);
   });
 
   it('emits a text path for both texts', () => {

@@ -46,55 +46,56 @@ function renderCorner(style: StyleDefinition, region: SliceRegion, x: number, y:
 
 function renderElastic(
   style: StyleDefinition,
+  half: HalfDefinition,
   name: RegionName,
   region: SliceRegion,
+  cornerW: number,
   spanW: number,
   spanH: number,
-  x: number,
-  y: number,
+  halfOffsetX: number,
 ): string {
+  const cornerH = half.corner.height;
+  let vpX: number;
+  let vpY: number;
+  let vpW: number;
+  let vpH: number;
+  if (name === 'top' || name === 'bottom') {
+    vpX = halfOffsetX + cornerW;
+    vpY = region.y - style.viewBox.y;
+    vpW = spanW;
+    vpH = cornerH;
+  } else if (name === 'left' || name === 'right') {
+    vpX = halfOffsetX;
+    vpY = cornerH;
+    vpW = cornerW;
+    vpH = spanH;
+  } else {
+    vpX = halfOffsetX + cornerW;
+    vpY = cornerH;
+    vpW = spanW;
+    vpH = spanH;
+  }
   const tileW = region.width;
   const tileH = region.height;
-  const span = name === 'left' || name === 'right' ? spanH : spanW;
-  const open = `<svg x="${x}" y="${y}" width="${span}" viewBox="0 0 ${spanW} ${spanH}">`;
-  const inner: string[] = [];
-  if (name === 'top' || name === 'bottom') {
-    for (let i = 0; i < tileSpan(spanW, tileW); i++) {
-      inner.push(
-        `<svg x="${i * tileW}" y="0" width="${tileW}" height="${tileH}" viewBox="${region.x} ${region.y} ${tileW} ${tileH}">${sliceFragment(
+  const tiles: string[] = [];
+  const xCount = tileSpan(vpW, tileW);
+  const yCount = tileSpan(vpH, tileH);
+  for (let j = 0; j < yCount; j++) {
+    for (let i = 0; i < xCount; i++) {
+      tiles.push(
+        `<svg x="${i * tileW}" y="${j * tileH}" width="${tileW}" height="${tileH}" viewBox="${region.x} ${region.y} ${tileW} ${tileH}">${sliceFragment(
           style.id,
           region.file,
         )}</svg>`,
       );
-    }
-  } else if (name === 'left' || name === 'right') {
-    for (let j = 0; j < tileSpan(spanH, tileH); j++) {
-      inner.push(
-        `<svg x="0" y="${j * tileH}" width="${tileW}" height="${tileH}" viewBox="${region.x} ${region.y} ${tileW} ${tileH}">${sliceFragment(
-          style.id,
-          region.file,
-        )}</svg>`,
-      );
-    }
-  } else {
-    for (let i = 0; i < tileSpan(spanW, tileW); i++) {
-      for (let j = 0; j < tileSpan(spanH, tileH); j++) {
-        inner.push(
-          `<svg x="${i * tileW}" y="${j * tileH}" width="${tileW}" height="${tileH}" viewBox="${region.x} ${region.y} ${tileW} ${tileH}">${sliceFragment(
-            style.id,
-            region.file,
-          )}</svg>`,
-        );
-      }
     }
   }
-  return open + inner.join('') + '</svg>';
+  return `<svg x="${vpX}" y="${vpY}" width="${vpW}" height="${vpH}" viewBox="0 0 ${vpW} ${vpH}">${tiles.join('')}</svg>`;
 }
 
 function renderHalf(
   half: HalfDefinition,
   style: StyleDefinition,
-  layout: TextLayout,
   halfWidthPx: number,
   halfOffsetX: number,
 ): string {
@@ -105,12 +106,20 @@ function renderHalf(
   const parts: string[] = [];
   for (const name of REGION_ORDER) {
     const region = half.regions[name];
-    const destX = halfOffsetX + region.x - half.origin.x;
-    const destY = region.y - style.viewBox.y;
     if (isCorner(name)) {
-      parts.push(renderCorner(style, region, destX, destY));
+      const x =
+        name === 'topLeft' || name === 'bottomLeft'
+          ? halfOffsetX
+          : halfOffsetX + halfWidthPx - cornerW;
+      const y =
+        name === 'bottomLeft' || name === 'bottomRight'
+          ? style.height - cornerH
+          : region.y - style.viewBox.y;
+      parts.push(renderCorner(style, region, x, y));
     } else {
-      parts.push(renderElastic(style, name, region, spanW, spanH, destX, destY));
+      parts.push(
+        renderElastic(style, half, name, region, cornerW, spanW, spanH, halfOffsetX),
+      );
     }
   }
   return parts.join('');
@@ -139,8 +148,8 @@ export class BadgeComposer {
     const leftHalfWidth = halfWidthOf(style.halves.left, style, leftLayout.width);
     const rightHalfWidth = halfWidthOf(style.halves.right, style, rightLayout.width);
     const backgrounds =
-      renderHalf(style.halves.left, style, leftLayout, leftHalfWidth, 0) +
-      renderHalf(style.halves.right, style, rightLayout, rightHalfWidth, leftHalfWidth);
+      renderHalf(style.halves.left, style, leftHalfWidth, 0) +
+      renderHalf(style.halves.right, style, rightHalfWidth, leftHalfWidth);
     const texts =
       renderText(style.halves.left, style, leftLayout, leftHalfWidth, 0) +
       renderText(style.halves.right, style, rightLayout, rightHalfWidth, leftHalfWidth);
