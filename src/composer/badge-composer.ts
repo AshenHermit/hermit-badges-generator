@@ -51,10 +51,10 @@ function dataUri(styleId: string, file: string): string {
 }
 
 function halfWidthOf(style: StyleDefinition, textWidth: number): number {
-  const { slice } = style.border;
+  const { width } = style.border;
   return Math.max(
     style.minHalfWidth,
-    slice.left + slice.right + textWidth + style.padding.left + style.padding.right,
+    width.left + width.right + textWidth + style.padding.left + style.padding.right,
   );
 }
 

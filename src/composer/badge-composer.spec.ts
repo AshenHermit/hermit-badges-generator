@@ -190,6 +190,23 @@ describe('BadgeComposer', () => {
     expect(rects[16]).toEqual([612, 5, 6, 169]); // right half right band
   });
 
+  it('sizes the text span from rendered border widths, not source slice', () => {
+    const text = 'This is a deliberately long left label for BadgeComposer';
+    const wideBorders: StyleDefinition = {
+      ...style,
+      border: {
+        slice: { top: 40, right: 40, bottom: 40, left: 40 },
+        width: { top: 60, right: 60, bottom: 60, left: 60 },
+      },
+    };
+    const textWidth = TextShaper.layout(text, font).width;
+    const rects = rectsOf(BadgeComposer.compose(wideBorders, text, ''));
+    expect(rects[9].x).toBeGreaterThan(style.minHalfWidth);
+    expect(rects[4].width).toBeGreaterThanOrEqual(
+      style.padding.left + style.padding.right + textWidth,
+    );
+  });
+
   it('places text using asymmetric width and padding', () => {
     const svg = BadgeComposer.compose(asymmetric, 'A', 'B');
     const paths = [...svg.matchAll(/transform="translate\(([^,]+),/g)].map((m) => Number(m[1]));
