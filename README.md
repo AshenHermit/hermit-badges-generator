@@ -30,6 +30,8 @@ npm run start
 
 The server listens on port `3000` by default. Override it with the `PORT` environment variable.
 
+Set `CACHE_DISABLED=true` to disable caching: no result is stored and every request is rendered again. Accepted values are `1`, `true`, and `yes` (case-insensitive). The variable is read at startup, so restart the app after changing it.
+
 ## Generate a badge
 
 ```bash
@@ -45,7 +47,7 @@ curl -o badge.png 'http://localhost:3000/api/v1/generate?left=Hello&right=World'
 | `style`   | no       | `hermit-frame` | Only `hermit-frame` in MVP     |
 | `format`  | no       | `png`          | Only `png` in MVP              |
 
-Response: `200` with `Content-Type: image/png` and `Cache-Control: public, max-age=3600`. Invalid parameters return `400`. Identical requests are byte-identical and served from an in-memory SHA-256 keyed cache (1 hour TTL, 1000 entries).
+Response: `200` with `Content-Type: image/png` and `Cache-Control: public, max-age=3600`. Invalid parameters return `400`. Identical requests are byte-identical and served from an in-memory SHA-256 keyed cache (1 hour TTL, 1000 entries), unless `CACHE_DISABLED=true` is set.
 
 ## Swagger
 

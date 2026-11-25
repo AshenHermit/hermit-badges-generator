@@ -11,10 +11,14 @@ export class MemoryCacheService implements BadgeCache {
   private readonly entries = new Map<string, Entry>();
   private readonly ttlMs: number;
   private readonly maxEntries: number;
+  private readonly disabled: boolean;
 
   constructor(@Optional() ttlMs?: number, @Optional() maxEntries?: number) {
     this.ttlMs = ttlMs ?? parseInt(process.env.CACHE_TTL_MS ?? '3600000', 10);
     this.maxEntries = maxEntries ?? parseInt(process.env.CACHE_MAX_ENTRIES ?? '1000', 10);
+    this.disabled = ['1', 'true', 'yes'].includes(
+      (process.env.CACHE_DISABLED ?? '').trim().toLowerCase(),
+    );
   }
 
   get size(): number {
@@ -22,6 +26,9 @@ export class MemoryCacheService implements BadgeCache {
   }
 
   set(key: string, value: Buffer): void {
+    if (this.disabled) {
+      return;
+    }
     if (this.entries.has(key)) {
       this.entries.delete(key);
     } else if (this.entries.size >= this.maxEntries) {
@@ -34,6 +41,9 @@ export class MemoryCacheService implements BadgeCache {
   }
 
   get(key: string): Buffer | undefined {
+    if (this.disabled) {
+      return undefined;
+    }
     const entry = this.entries.get(key);
     if (!entry) {
       return undefined;
