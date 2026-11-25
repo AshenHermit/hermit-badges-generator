@@ -79,15 +79,25 @@ throwaway spike.
     `corner {width,height}`, `halves.left/right {origin,width,file}`, `font`.
     No `regions`/`viewBox` keys.
 - Rewrite `src/composer/badge-composer.ts`:
-  - For each half, emit nine `<pattern patternUnits="userSpaceOnUse">` defs using
-    the proven math: pattern `x = halfOffsetX + rx`, `y = ry`, `width = rw`,
-    `height = rh`; inner `<image href="data:image/svg+xml;base64,…" x="-rx"
-    y="-ry" width="309" height="181"/>`; a `<rect>` with the same geometry and
-    `fill="url(#id)"` for each region.
-  - Region rectangles (relative to half origin): corners `(0,0)`,
-    `(hw-40,0)`, `(0,141)`, `(hw-40,141)` at 40×40; top/bottom `x=40`, `y=0/141`,
-    `width=spanW=hw-80`, `height=40`; left/right `x=0/hw-40`, `y=40`, `40×101`;
-    center `x=40`, `y=40`, `spanW×101`.
+  - **Pattern geometry uses native source windows; rect geometry grows.** For
+    each region define native `(nx, ny, nw, nh)` and dynamic rect `(rx, ry, rw,
+    rh)`. Emit `<pattern patternUnits="userSpaceOnUse" x="rectX" y="rectY"
+    width="nw" height="nh">` containing `<image href="data:image/svg+xml;base64,…"
+    x="-nx" y="-ny" width="309" height="181"/>`, and a `<rect>` at the dynamic
+    rect geometry with `fill="url(#id)"`. If pattern width/height were the grown
+    `spanW`, the sampled source window would run past the 309px half image and
+    right-side regions would go blank — a corrected throwaway spike confirmed
+    this, while native windows produce seamless repetition.
+  - Native windows (source coordinates, relative to half): corners `(0,0,40,40)`,
+    `(269,0,40,40)`, `(0,141,40,40)`, `(269,141,40,40)`; top/bottom
+    `(40,0,229,40)` / `(40,141,229,40)`; left/right `(0,40,40,101)` /
+    `(269,40,40,101)`; center `(40,40,229,101)`.
+  - Dynamic rects (relative to half origin, `hw` = grown half width,
+    `spanW = hw - 80`): corners `(0,0)`, `(hw-40,0)`, `(0,141)`, `(hw-40,141)`
+    at 40×40; top/bottom `x=40`, `y=0/141`, `width=spanW`, `height=40`;
+    left/right `x=0/hw-40`, `y=40`, `40×101`; center `x=40`, `y=40`,
+    `spanW×101`. Right-side patterns stay anchored to native source x=269 while
+    only their `<rect>` moves to `hw-40`.
   - Pattern ids are deterministic and unique across halves (`p0…p17`).
   - Half files are read once per process into a module-level cache; data URIs are
     built from those exact bytes.
@@ -107,7 +117,8 @@ throwaway spike.
   and pattern-based repetition.
 - Verification gate before claiming done: `npm run assets:build`,
   `node scripts/check-assets.mjs`, `npm run build`, `npm test`, `npm run test:e2e`,
-  plus visual inspection of the exact user URL.
+  plus visual inspection of the exact user URL
+  `http://localhost:3000/api/v1/generate?format=png&style=hermit-frame&right=%3E%3D20&left=node.js`.
 
 ## Left to the builder
 
