@@ -4,7 +4,7 @@
 
 **Goal:** NestJS service that renders PNG badges from query params via 9-slice repeat of a hand-drawn frame, with deterministic sha256 cache and Swagger at `/api/docs`.
 
-**Architecture:** Fresh NestJS (CommonJS + Jest) app. `StyleRegistry` loads a manifest + sliced SVG fragments; `TextShaper` (opentype.js) measures and converts text to `<path>`; `BadgeComposer` assembles an SVG with fixed corners and explicitly repeated edge/center tiles (no scaling); `PngRenderer` (resvg-js, `renderAsync`, system fonts off) rasterizes to PNG; `GenerationService` wraps it in an in-memory sha256 cache. Controller exposes one GET endpoint, Swagger generated lazily with `useGlobalPrefix`.
+**Architecture:** Fresh NestJS (CommonJS + Jest) app. `StyleRegistry` loads a manifest + sliced SVG fragments; `TextShaper` (opentype.js) measures and converts text to `<path>`; `BadgeComposer` assembles an SVG with fixed corners and explicitly repeated edge/center tiles (no scaling); `PngRenderer` (resvg-js, sync `render()`, system fonts off) rasterizes to PNG; `GenerationService` wraps it in an in-memory sha256 cache. Controller exposes one GET endpoint, Swagger generated lazily with `useGlobalPrefix`.
 
 **Tech Stack:** Node 20+, TypeScript 5, NestJS 11, `@nestjs/swagger` 11, `@resvg/resvg-js` 2, `opentype.js` 1.3, Jest + supertest, Windows/PowerShell.
 
@@ -243,7 +243,7 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement**
 
-`new Resvg(svg, { font: { loadSystemFonts: false } })`; `const png = await resvg.renderAsync().asPng()`; return `Buffer.from(png)`. Do not load a font into resvg — text is already a path.
+`new Resvg(svg, { font: { loadSystemFonts: false } })`; `const png = resvg.render().asPng()`; return `Buffer.from(png)`. Use the instance's **synchronous** `render()` — `@resvg/resvg-js@2.6.2` has no `Resvg.renderAsync()` method (only a separate top-level `renderAsync(svg, options)` function). Do not load a font into resvg — text is already a path.
 
 - [ ] **Step 4: Run to verify it passes**
 
