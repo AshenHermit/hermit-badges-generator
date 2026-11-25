@@ -5,3 +5,4 @@ coverage/
 .worktrees/
 .superpowers/sdd/
 .env
+assets/templates/hermit-frame/template-*.html

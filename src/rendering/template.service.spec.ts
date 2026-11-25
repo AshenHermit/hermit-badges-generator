@@ -83,4 +83,35 @@ describe('TemplateService', () => {
       fs.unlinkSync(tempPath);
     }
   });
+
+  it('keeps a placeholder inside left text literal and does not inject it into the right half', () => {
+    clearFreshFlags();
+    const service = new TemplateService();
+
+    const tempPath = service.prepare('{{RIGHT}}', 'Right text');
+    try {
+      const html = fs.readFileSync(tempPath, 'utf8');
+      const left = html.match(/<div class="badge-left-part">([^<]*)<\/div>/);
+      const right = html.match(/<div class="badge-right-part">([^<]*)<\/div>/);
+      expect(left?.[1]).toBe('{{RIGHT}}');
+      expect(right?.[1]).toBe('Right text');
+    } finally {
+      fs.unlinkSync(tempPath);
+    }
+  });
+
+  it('treats an empty FRESH_TEMPLATE as unset and honours FRESH_MANIFEST', () => {
+    clearFreshFlags();
+    process.env.FRESH_TEMPLATE = '';
+    process.env.FRESH_MANIFEST = 'yes';
+    const service = new TemplateService();
+
+    fs.writeFileSync(TEMPLATE_PATH, `${originalTemplate}\n<!-- empty-primary marker -->`, 'utf8');
+    const tempPath = service.prepare('L', 'R');
+    try {
+      expect(fs.readFileSync(tempPath, 'utf8')).toContain('<!-- empty-primary marker -->');
+    } finally {
+      fs.unlinkSync(tempPath);
+    }
+  });
 });

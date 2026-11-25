@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 import { BrowserLike, BrowserRenderer, PageLike } from './browser-renderer';
 import { TemplateService } from './template.service';
@@ -56,7 +57,7 @@ describe('BrowserRenderer with an injected browser', () => {
       headless: true,
     });
     expect(templates.prepare).toHaveBeenCalledWith('Hello', 'World');
-    expect(goto).toHaveBeenCalledWith(`file://${TEMP_HTML}`);
+    expect(goto).toHaveBeenCalledWith(pathToFileURL(TEMP_HTML).href);
     expect(evaluate).toHaveBeenCalledWith(expect.any(Function));
     expect(locator).toHaveBeenCalledWith('.github-badge');
     expect(screenshot).toHaveBeenCalledWith(SCREENSHOT_OPTIONS);

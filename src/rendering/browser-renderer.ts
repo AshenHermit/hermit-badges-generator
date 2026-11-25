@@ -1,5 +1,6 @@
 import { Inject, Injectable, OnModuleDestroy, Optional } from '@nestjs/common';
 import * as fs from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 import { Renderer, RenderInput } from './renderer';
 import { TemplateService } from './template.service';
@@ -42,7 +43,7 @@ export class BrowserRenderer implements Renderer, OnModuleDestroy {
     let tempPath: string | undefined;
     try {
       tempPath = this.templates.prepare(input.left, input.right);
-      await page.goto(`file://${tempPath}`);
+      await page.goto(pathToFileURL(tempPath).href);
       await page.evaluate(() => document.fonts.ready);
       const fontLoaded = await page.evaluate(() =>
         document.fonts.check('50px "Lipstick Rage"'),

@@ -23,8 +23,8 @@ describe('golden PNG', () => {
     await moduleRef.close();
   });
 
-  // Golden bytes are regenerated in a later task; this currently exercises the
-  // real Chromium render path and reports the stale committed PNG as a failure.
+  // The committed golden PNG is current for the CSS renderer: regenerated from
+  // this build with left=Hello&right=World and verified byte for byte here.
   it('matches the committed hermit-frame PNG byte for byte', async () => {
     const query = new GenerateQueryDto();
     query.left = 'Hello';

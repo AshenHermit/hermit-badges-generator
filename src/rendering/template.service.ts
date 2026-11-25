@@ -11,9 +11,9 @@ const TEMPLATE_DIR = path.dirname(TEMPLATE_PATH);
 
 const FRESH_VALUES = ['1', 'true', 'yes'];
 
-/** Startup-read: FRESH_TEMPLATE wins, FRESH_MANIFEST remains an alias. */
+/** Startup-read: FRESH_TEMPLATE wins when set; FRESH_MANIFEST is the alias when it is empty or unset. */
 export function isFreshTemplate(): boolean {
-  const raw = process.env.FRESH_TEMPLATE ?? process.env.FRESH_MANIFEST ?? '';
+  const raw = process.env.FRESH_TEMPLATE || process.env.FRESH_MANIFEST || '';
   return FRESH_VALUES.includes(raw.trim().toLowerCase());
 }
 
@@ -43,9 +43,9 @@ export class TemplateService {
       this.fresh || this.cachedTemplate === undefined
         ? fs.readFileSync(TEMPLATE_PATH, 'utf8')
         : this.cachedTemplate;
-    const html = template
-      .replace('{{LEFT}}', escapeHtml(left))
-      .replace('{{RIGHT}}', escapeHtml(right));
+    const html = template.replace(/\{\{(LEFT|RIGHT)\}\}/g, (_, key: string) =>
+      escapeHtml(key === 'LEFT' ? left : right),
+    );
     const tempPath = path.join(TEMPLATE_DIR, `template-${randomUUID()}.html`);
     fs.writeFileSync(tempPath, html, 'utf8');
     return tempPath;
