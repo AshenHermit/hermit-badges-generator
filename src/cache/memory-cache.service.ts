@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { BadgeCache } from './badge-cache';
 
 interface Entry {
@@ -12,7 +12,7 @@ export class MemoryCacheService implements BadgeCache {
   private readonly ttlMs: number;
   private readonly maxEntries: number;
 
-  constructor(ttlMs?: number, maxEntries?: number) {
+  constructor(@Optional() ttlMs?: number, @Optional() maxEntries?: number) {
     this.ttlMs = ttlMs ?? parseInt(process.env.CACHE_TTL_MS ?? '3600000', 10);
     this.maxEntries = maxEntries ?? parseInt(process.env.CACHE_MAX_ENTRIES ?? '1000', 10);
   }
