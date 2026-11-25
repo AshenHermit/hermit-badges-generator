@@ -58,4 +58,21 @@ describe('MemoryCacheService', () => {
     expect(svc.get('b')).toBeUndefined();
     expect(svc.get('c')).toBeDefined();
   });
+
+  it('does not store entries when CACHE_DISABLED is true', () => {
+    const previous = process.env.CACHE_DISABLED;
+    process.env.CACHE_DISABLED = 'true';
+    try {
+      const svc = new MemoryCacheService(1000, 10);
+      svc.set('k', Buffer.from('v'));
+      expect(svc.size).toBe(0);
+      expect(svc.get('k')).toBeUndefined();
+    } finally {
+      if (previous === undefined) {
+        delete process.env.CACHE_DISABLED;
+      } else {
+        process.env.CACHE_DISABLED = previous;
+      }
+    }
+  });
 });
