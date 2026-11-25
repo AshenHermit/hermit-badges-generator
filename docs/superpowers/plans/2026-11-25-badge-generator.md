@@ -4,7 +4,7 @@
 
 **Goal:** NestJS service that renders PNG badges from query params via 9-slice repeat of a hand-drawn frame, with deterministic sha256 cache and Swagger at `/api/docs`.
 
-**Architecture:** Fresh NestJS (CommonJS + Jest) app. `StyleRegistry` loads a manifest + sliced SVG fragments; `TextShaper` (opentype.js) measures and converts text to `<path>`; `BadgeComposer` assembles an SVG with fixed corners and explicitly repeated edge/center tiles (no scaling); `PngRenderer` (resvg-js, `renderAsync`, system fonts off) rasterizes to PNG; `GenerationService` wraps it in an in-memory sha256 cache. Controller exposes one GET endpoint, Swagger generated lazily with `useGlobalPrefix`.
+**Architecture:** Fresh NestJS (CommonJS + Jest) app. `StyleRegistry` loads a manifest + sliced SVG fragments; `TextShaper` (opentype.js) measures and converts text to `<path>`; `BadgeComposer` assembles an SVG with fixed corners and explicitly repeated edge/center tiles (no scaling); `PngRenderer` (resvg-js, sync `render()`, system fonts off) rasterizes to PNG; `GenerationService` wraps it in an in-memory sha256 cache. Controller exposes one GET endpoint, Swagger generated lazily with `useGlobalPrefix`.
 
 **Tech Stack:** Node 20+, TypeScript 5, NestJS 11, `@nestjs/swagger` 11, `@resvg/resvg-js` 2, `opentype.js` 1.3, Jest + supertest, Windows/PowerShell.
 
@@ -52,7 +52,7 @@ Expected: FAIL — modules do not exist.
 
 - [ ] **Step 3: Create project files**
 
-`package.json` scripts: `build`, `start`, `start:dev`, `assets:build` (`node scripts/build-slices.mjs`), `test` (`jest`), `test:e2e` (`jest --config test/jest-e2e.json --runInBand`). Dependencies exactly: `@nestjs/common@^11`, `@nestjs/core@^11`, `@nestjs/platform-express@^11`, `@nestjs/config@^4`, `@nestjs/swagger@^11`, `reflect-metadata@^0.2`, `rxjs@^7.8`, `@resvg/resvg-js@^2.6`, `opentype.js@^1.3`. Dev: `@nestjs/cli@^11`, `@nestjs/testing@^11`, `@types/jest@^29`, `@types/node@^22`, `@types/opentype.js@^1.3`, `@types/supertest@^6`, `jest@^29`, `ts-jest@^29`, `supertest@^7`, `typescript@^5`. `tsconfig.json`: CommonJS, target ES2022, `experimentalDecorators`, `emitDecoratorMetadata`, `esModuleInterop`, `strict`. `AppModule` imports `ConfigModule.forRoot({ isGlobal: true })` only (other modules added later). `.gitignore`: `node_modules/`, `dist/`, `coverage/`, `*.log`.
+`package.json` scripts: `build`, `start`, `start:dev`, `assets:build` (`node scripts/build-slices.mjs`), `test` (`jest`), `test:e2e` (`jest --config test/jest-e2e.json --runInBand`). Dependencies exactly: `@nestjs/common@^11`, `@nestjs/core@^11`, `@nestjs/platform-express@^11`, `@nestjs/config@^4`, `@nestjs/swagger@^11`, `reflect-metadata@^0.2`, `rxjs@^7.8`, `@resvg/resvg-js@^2.6`, `opentype.js@^1.3`. Dev: `@nestjs/cli@^11`, `@nestjs/testing@^11`, `@types/jest@^29`, `@types/node@^22`, `@types/opentype.js@^1.3`, `@types/supertest@^6`, `jest@^29`, `ts-jest@^29`, `supertest@^7`, `typescript@^5`. `tsconfig.json`: CommonJS, target ES2022, `experimentalDecorators`, `emitDecoratorMetadata`, `esModuleInterop`, `strict`. `jest.config.js`: `preset: 'ts-jest'`, `testEnvironment: 'node'`, `roots: ['<rootDir>/src']`, `testRegex: '\\.spec\\.ts$'`. `test/jest-e2e.json`: `preset: 'ts-jest'`, `testEnvironment: 'node'`, `rootDir: '..'`, `testRegex: 'test/.*\\.e2e-spec\\.ts$'` (so `test/helpers/create-app.ts` is not treated as a test). `AppModule` imports `ConfigModule.forRoot({ isGlobal: true })` only (other modules added later). `.gitignore` already exists at repo root (do not overwrite).
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -94,7 +94,7 @@ and the same for `OFL.txt` from `ofl/mansalva/OFL.txt`. Assert both files are no
 
 - [ ] **Step 4: Implement `scripts/build-slices.mjs`**
 
-Read `source.svg`; strip XML declaration, DOCTYPE, outer `<svg ...>` and `</svg>` with a regex; keep inner content as `fragment`. Write manifest with constants: `viewBox {x:251,y:30,width:618,height:181}`, `height 181`, `padding 12`, `minHalfWidth 120`, `font { file:'Mansalva-Regular.ttf', size:30, color:'#ffffff' }`, each half `origin` = `{251,30}` / `{560,30}`, `width 309`, `corner {width:40,height:40}`. Region coordinates per half: corners at `(origin.x,30)`, `(origin.x+269,30)`, `(origin.x,171)`, `(origin.x+269,171)` each 40×40; edges `top {origin.x+40,30,229,40}`, `bottom {origin.x+40,171,229,40}`, `left {origin.x,70,40,101}`, `right {origin.x+269,70,40,101}`; center `{origin.x+40,70,229,101}`. Write one fragment file per region named `left/top-left.svg` … `right/center.svg`.
+Read `source.svg`; strip XML declaration, DOCTYPE, outer `<svg ...>` and `</svg>` with a regex; keep inner content as `fragment`. Write manifest with constants: `viewBox {x:251,y:30,width:618,height:181}`, `height 181`, `padding 12`, `minHalfWidth 309`, `font { file:'Mansalva-Regular.ttf', size:50, color:'#ffffff' }`, each half `origin` = `{251,30}` / `{560,30}`, `width 309`, `corner {width:40,height:40}`. Region coordinates per half: corners at `(origin.x,30)`, `(origin.x+269,30)`, `(origin.x,171)`, `(origin.x+269,171)` each 40×40; edges `top {origin.x+40,30,229,40}`, `bottom {origin.x+40,171,229,40}`, `left {origin.x,70,40,101}`, `right {origin.x+269,70,40,101}`; center `{origin.x+40,70,229,101}`. Write one fragment file per region named `left/top-left.svg` … `right/center.svg`.
 
 - [ ] **Step 5: Run test to verify it passes**
 
@@ -194,9 +194,11 @@ git commit -m "feat: add opentype text shaping"
 - [ ] **Step 1: Write failing tests**
 
 `badge-composer.spec.ts` using a real `StyleRegistry.get('hermit-frame')` and real `TextShaper`:
-- output starts with `<svg` and has `width="240" height="181"` for empty text at min width;
+- output starts with `<svg` and has `width="618" height="181"` for empty text at min width;
 - count of `viewBox="251 30 40 40"` fragments (top-left corner) is exactly 1;
-- for text long enough that `halfWidth > 120`, the top-edge parent viewport contains `tileSpan(spanW, 229)` child tiles and **no** `scale(` substring in the output;
+- for text long enough that `halfWidth > 309`, the top-edge parent viewport contains `tileSpan(spanW, 229)` child tiles and **no** `scale(` substring in the output;
+- for empty text (half width 309), left top-right corner nested `<svg>` has `x="269"`, right top-left has `x="309"`, right top-right has `x="578"`, and no corner is placed beyond the badge width;
+- for empty text, the left edge band parent nested `<svg>` has `x="0"` and the right edge band parent nested `<svg>` has `x="578"` (`halfOffsetX + halfWidth - cornerW`), so no vertical band is left uncovered;
 - output contains `<path` for both texts;
 - two calls with identical inputs produce identical strings.
 
@@ -207,7 +209,7 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement**
 
-Per half: `cornerW = half.corner.width`, `cornerH = half.corner.height`, `spanW = halfWidth - 2*cornerW`, `spanH = style.height - 2*cornerH`, `halfWidth = Math.max(style.minHalfWidth, 2*cornerW + textWidth + 2*style.padding)`. Render 4 corners as one nested `<svg x y width height viewBox="srcX srcY w h">fragment</svg>` each. Render each elastic region as a parent nested `<svg x y width=span viewBox="0 0 spanW spanH">` containing exactly `tileSpan(span, tile)` child nested `<svg x={i*tileW} y={j*tileH} width={tileW} height={tileH} viewBox="srcX srcY tileW tileH">fragment</svg>` (one axis for edges, both for center). Destination x = `halfOffsetX + region.x - half.origin.x`, y = `region.y - style.viewBox.y`. Place both halves' backgrounds first, then text paths: `x = cornerW + style.padding + (spanW - 2*style.padding - textWidth)/2 + halfOffsetX`, `baselineY = cornerH + spanH/2 + (ascenderPx + descenderPx)/2`. Text path wrapped in `<path d="..." transform="translate(x, baselineY)" fill="..."/>`.
+Per half: `cornerW = half.corner.width`, `cornerH = half.corner.height`, `spanW = halfWidth - 2*cornerW`, `spanH = style.height - 2*cornerH`, `halfWidth = Math.max(style.minHalfWidth, 2*cornerW + textWidth + 2*style.padding)`. Corners are native-size nested `<svg x y width height viewBox="srcX srcY w h">fragment</svg>` placed at the half's edges, NOT at source-relative offsets: `topLeft`/`bottomLeft` x = `halfOffsetX`, `topRight`/`bottomRight` x = `halfOffsetX + halfWidth - cornerW`; `top*` y = `region.y - style.viewBox.y`, `bottom*` y = `style.height - cornerH`. Elastic regions are parent nested `<svg x y width height viewBox="0 0 width height">` whose viewport equals its viewBox on both axes (no scaling): top/bottom `x = halfOffsetX + cornerW`, `y = region.y - style.viewBox.y`, `width = spanW`, `height = cornerH`; left `x = halfOffsetX`, right `x = halfOffsetX + halfWidth - cornerW`, `y = cornerH`, `width = cornerW`, `height = spanH`; center `x = halfOffsetX + cornerW`, `y = cornerH`, `width = spanW`, `height = spanH`. Each contains exactly `tileSpan(viewportWidth, tile.width) * tileSpan(viewportHeight, tile.height)` child nested `<svg x y width height viewBox="srcX srcY tileW tileH">fragment</svg>` tiles (one axis for edges, both for center). Place both halves' backgrounds first, then text paths: `x = cornerW + style.padding + (spanW - 2*style.padding - textWidth)/2 + halfOffsetX`, `baselineY = cornerH + spanH/2 + (ascenderPx + descenderPx)/2`. Text path wrapped in `<path d="..." transform="translate(x, baselineY)" fill="..."/>`.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -242,7 +244,7 @@ Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement**
 
-`new Resvg(svg, { font: { loadSystemFonts: false } })`; `const png = await resvg.renderAsync().asPng()`; return `Buffer.from(png)`. Do not load a font into resvg — text is already a path.
+`new Resvg(svg, { font: { loadSystemFonts: false } })`; `const png = resvg.render().asPng()`; return `Buffer.from(png)`. Use the instance's **synchronous** `render()` — `@resvg/resvg-js@2.6.2` has no `Resvg.renderAsync()` method (only a separate top-level `renderAsync(svg, options)` function). Do not load a font into resvg — text is already a path.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -297,7 +299,7 @@ git commit -m "feat: add deterministic cache key and memory cache"
 
 **Files:**
 - Create: `src/generation/dto/generate-query.dto.ts`, `src/generation/generation.service.ts`, `src/generation/generation.controller.ts`, `src/generation/generation.module.ts`, `src/generation/generation.service.spec.ts`, `test/generate.e2e-spec.ts`
-- Modify: `src/app.module.ts`, `src/app.setup.ts`
+- Modify: `src/app.module.ts`
 
 **Interfaces:**
 - Consumes: everything from Tasks 3–7.
