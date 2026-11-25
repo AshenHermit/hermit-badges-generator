@@ -26,10 +26,10 @@ describe('BadgeComposer', () => {
     return output.slice(openTagEnd, i - 6);
   }
 
-  it('starts with <svg and has width="240" height="181" for empty text at min width', () => {
+  it('starts with <svg and has width="618" height="181" for empty text at min width', () => {
     const output = BadgeComposer.compose(style, '', '');
     expect(output.startsWith('<svg')).toBe(true);
-    expect(output).toContain('width="240"');
+    expect(output).toContain('width="618"');
     expect(output).toContain('height="181"');
   });
 
@@ -63,7 +63,7 @@ describe('BadgeComposer', () => {
     const leftHalfWidth = Math.max(style.minHalfWidth, 2 * left.corner.width + 0 + 2 * style.padding);
     const width =
       leftHalfWidth + Math.max(style.minHalfWidth, 2 * right.corner.width + 0 + 2 * style.padding);
-    expect(width).toBe(240);
+    expect(width).toBe(618);
     const leftTR = left.regions.topRight;
     expect(output).toContain(
       `<svg x="${leftHalfWidth - left.corner.width}" y="0" width="${leftTR.width}" height="${leftTR.height}" viewBox="${leftTR.x} ${leftTR.y} ${leftTR.width} ${leftTR.height}">`,
@@ -127,7 +127,7 @@ describe('BadgeComposer', () => {
     ];
     expect(viewports).toEqual(expected);
     expect(viewports[1].x).toBe(0);
-    expect(viewports[8].x).toBe(200);
+    expect(viewports[8].x).toBe(578);
   });
 
   it('tracks each half width when placing the right vertical band', () => {
@@ -144,6 +144,19 @@ describe('BadgeComposer', () => {
     expect(viewports[3].x).toBe(leftHalfWidth - cornerW);
     expect(viewports[6].x).toBe(leftHalfWidth);
     expect(viewports[8].x).toBe(leftHalfWidth + rightHalfWidth - cornerW);
+  });
+
+  it('keeps full source tile width at minimum size so frame art is not clipped', () => {
+    const output = BadgeComposer.compose(style, '', '');
+    const viewports = elasticViewports(output);
+    const cornerW = style.halves.left.corner.width;
+    const cornerH = style.halves.left.corner.height;
+    const topWidths = viewports.filter((v) => v.y === 0).map((v) => v.width);
+    const sideHeights = viewports
+      .filter((v) => v.width === cornerW && v.height > cornerH)
+      .map((v) => v.height);
+    expect(Math.min(...topWidths)).toBeGreaterThanOrEqual(style.halves.left.regions.top.width);
+    expect(Math.min(...sideHeights)).toBeGreaterThanOrEqual(style.halves.left.regions.left.height);
   });
 
   it('emits a text path for both texts', () => {

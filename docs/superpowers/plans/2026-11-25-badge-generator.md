@@ -94,7 +94,7 @@ and the same for `OFL.txt` from `ofl/mansalva/OFL.txt`. Assert both files are no
 
 - [ ] **Step 4: Implement `scripts/build-slices.mjs`**
 
-Read `source.svg`; strip XML declaration, DOCTYPE, outer `<svg ...>` and `</svg>` with a regex; keep inner content as `fragment`. Write manifest with constants: `viewBox {x:251,y:30,width:618,height:181}`, `height 181`, `padding 12`, `minHalfWidth 120`, `font { file:'Mansalva-Regular.ttf', size:30, color:'#ffffff' }`, each half `origin` = `{251,30}` / `{560,30}`, `width 309`, `corner {width:40,height:40}`. Region coordinates per half: corners at `(origin.x,30)`, `(origin.x+269,30)`, `(origin.x,171)`, `(origin.x+269,171)` each 40×40; edges `top {origin.x+40,30,229,40}`, `bottom {origin.x+40,171,229,40}`, `left {origin.x,70,40,101}`, `right {origin.x+269,70,40,101}`; center `{origin.x+40,70,229,101}`. Write one fragment file per region named `left/top-left.svg` … `right/center.svg`.
+Read `source.svg`; strip XML declaration, DOCTYPE, outer `<svg ...>` and `</svg>` with a regex; keep inner content as `fragment`. Write manifest with constants: `viewBox {x:251,y:30,width:618,height:181}`, `height 181`, `padding 12`, `minHalfWidth 309`, `font { file:'Mansalva-Regular.ttf', size:50, color:'#ffffff' }`, each half `origin` = `{251,30}` / `{560,30}`, `width 309`, `corner {width:40,height:40}`. Region coordinates per half: corners at `(origin.x,30)`, `(origin.x+269,30)`, `(origin.x,171)`, `(origin.x+269,171)` each 40×40; edges `top {origin.x+40,30,229,40}`, `bottom {origin.x+40,171,229,40}`, `left {origin.x,70,40,101}`, `right {origin.x+269,70,40,101}`; center `{origin.x+40,70,229,101}`. Write one fragment file per region named `left/top-left.svg` … `right/center.svg`.
 
 - [ ] **Step 5: Run test to verify it passes**
 
@@ -194,11 +194,11 @@ git commit -m "feat: add opentype text shaping"
 - [ ] **Step 1: Write failing tests**
 
 `badge-composer.spec.ts` using a real `StyleRegistry.get('hermit-frame')` and real `TextShaper`:
-- output starts with `<svg` and has `width="240" height="181"` for empty text at min width;
+- output starts with `<svg` and has `width="618" height="181"` for empty text at min width;
 - count of `viewBox="251 30 40 40"` fragments (top-left corner) is exactly 1;
-- for text long enough that `halfWidth > 120`, the top-edge parent viewport contains `tileSpan(spanW, 229)` child tiles and **no** `scale(` substring in the output;
-- for empty text (half width 120), left top-right corner nested `<svg>` has `x="80"`, right top-left has `x="120"`, right top-right has `x="200"`, and no corner is placed beyond the badge width;
-- for empty text, the left edge band parent nested `<svg>` has `x="0"` and the right edge band parent nested `<svg>` has `x="200"` (`halfOffsetX + halfWidth - cornerW`), so no vertical band is left uncovered;
+- for text long enough that `halfWidth > 309`, the top-edge parent viewport contains `tileSpan(spanW, 229)` child tiles and **no** `scale(` substring in the output;
+- for empty text (half width 309), left top-right corner nested `<svg>` has `x="269"`, right top-left has `x="309"`, right top-right has `x="578"`, and no corner is placed beyond the badge width;
+- for empty text, the left edge band parent nested `<svg>` has `x="0"` and the right edge band parent nested `<svg>` has `x="578"` (`halfOffsetX + halfWidth - cornerW`), so no vertical band is left uncovered;
 - output contains `<path` for both texts;
 - two calls with identical inputs produce identical strings.
 

@@ -9,8 +9,8 @@ rendered picture is identical.
 - OS: Windows 11 Pro (25H2), build 10.0.26200.9974, 64-bit (win32 x64)
 - Node: v24.11.0
 - `@resvg/resvg-js`: 2.6.2 (pinned exactly in `package.json` and `package-lock.json`)
-- Size: 13734 bytes
-- SHA-256: `43B77A1DA69820CBB45D594527AF07646C7BBFEE1A57E9F7304177071DE292FF`
+- Size: 19827 bytes
+- SHA-256: `49B670054956B6E1E224B4BD80D934310B5E3CFF56753A279FB8291515298C04`
 
 ## Regeneration
 

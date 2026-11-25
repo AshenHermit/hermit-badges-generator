@@ -8,10 +8,10 @@
   },
   "height": 181,
   "padding": 12,
-  "minHalfWidth": 120,
+  "minHalfWidth": 309,
   "font": {
     "file": "Mansalva-Regular.ttf",
-    "size": 30,
+    "size": 50,
     "color": "#ffffff"
   },
   "halves": {
