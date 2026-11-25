@@ -50,8 +50,12 @@ function dataUri(styleId: string, file: string): string {
   return `data:image/svg+xml;base64,${Buffer.from(raw).toString('base64')}`;
 }
 
-function halfWidthOf(half: HalfDefinition, style: StyleDefinition, textWidth: number): number {
-  return Math.max(style.minHalfWidth, 2 * half.corner.width + textWidth + 2 * style.padding);
+function halfWidthOf(style: StyleDefinition, textWidth: number): number {
+  const { slice } = style.border;
+  return Math.max(
+    style.minHalfWidth,
+    slice.left + slice.right + textWidth + style.padding.left + style.padding.right,
+  );
 }
 
 function windowsOf(
@@ -60,14 +64,16 @@ function windowsOf(
   halfWidthPx: number,
   halfOffsetX: number,
 ): Record<RegionKey, Window> {
-  const cornerW = half.corner.width;
-  const cornerH = half.corner.height;
-  const nativeRightX = half.width - cornerW;
-  const nativeBottomY = style.height - cornerH;
-  const nativeSpanW = half.width - 2 * cornerW;
-  const nativeSpanH = style.height - 2 * cornerH;
-  const spanW = halfWidthPx - 2 * cornerW;
-  const rightX = halfOffsetX + halfWidthPx - cornerW;
+  const { slice, width } = style.border;
+  const nativeRightX = half.width - slice.right;
+  const nativeBottomY = style.height - slice.bottom;
+  const nativeSpanW = half.width - slice.left - slice.right;
+  const nativeSpanH = style.height - slice.top - slice.bottom;
+  const rightX = halfOffsetX + halfWidthPx - width.right;
+  const bottomY = style.height - width.bottom;
+  const spanW = halfWidthPx - width.left - width.right;
+  const spanH = style.height - width.top - width.bottom;
+  const bandX = halfOffsetX + width.left;
   const window = (
     nativeX: number,
     nativeY: number,
@@ -80,33 +86,51 @@ function windowsOf(
   ): Window => ({ nativeX, nativeY, nativeWidth, nativeHeight, rectX, rectY, rectWidth, rectHeight });
 
   return {
-    topLeft: window(0, 0, cornerW, cornerH, halfOffsetX, 0, cornerW, cornerH),
-    topRight: window(nativeRightX, 0, cornerW, cornerH, rightX, 0, cornerW, cornerH),
-    bottomLeft: window(0, nativeBottomY, cornerW, cornerH, halfOffsetX, nativeBottomY, cornerW, cornerH),
-    bottomRight: window(nativeRightX, nativeBottomY, cornerW, cornerH, rightX, nativeBottomY, cornerW, cornerH),
-    top: window(cornerW, 0, nativeSpanW, cornerH, halfOffsetX + cornerW, 0, spanW, cornerH),
+    topLeft: window(0, 0, slice.left, slice.top, halfOffsetX, 0, width.left, width.top),
+    topRight: window(nativeRightX, 0, slice.right, slice.top, rightX, 0, width.right, width.top),
+    bottomLeft: window(
+      0,
+      nativeBottomY,
+      slice.left,
+      slice.bottom,
+      halfOffsetX,
+      bottomY,
+      width.left,
+      width.bottom,
+    ),
+    bottomRight: window(
+      nativeRightX,
+      nativeBottomY,
+      slice.right,
+      slice.bottom,
+      rightX,
+      bottomY,
+      width.right,
+      width.bottom,
+    ),
+    top: window(slice.left, 0, nativeSpanW, slice.top, bandX, 0, spanW, width.top),
     bottom: window(
-      cornerW,
+      slice.left,
       nativeBottomY,
       nativeSpanW,
-      cornerH,
-      halfOffsetX + cornerW,
-      nativeBottomY,
+      slice.bottom,
+      bandX,
+      bottomY,
       spanW,
-      cornerH,
+      width.bottom,
     ),
-    left: window(0, cornerH, cornerW, nativeSpanH, halfOffsetX, cornerH, cornerW, nativeSpanH),
-    right: window(nativeRightX, cornerH, cornerW, nativeSpanH, rightX, cornerH, cornerW, nativeSpanH),
-    center: window(
-      cornerW,
-      cornerH,
-      nativeSpanW,
+    left: window(0, slice.top, slice.left, nativeSpanH, halfOffsetX, width.top, width.left, spanH),
+    right: window(
+      nativeRightX,
+      slice.top,
+      slice.right,
       nativeSpanH,
-      halfOffsetX + cornerW,
-      cornerH,
-      spanW,
-      nativeSpanH,
+      rightX,
+      width.top,
+      width.right,
+      spanH,
     ),
+    center: window(slice.left, slice.top, nativeSpanW, nativeSpanH, bandX, width.top, spanW, spanH),
   };
 }
 
@@ -137,18 +161,20 @@ function renderHalf(
 }
 
 function renderText(
-  half: HalfDefinition,
   style: StyleDefinition,
   layout: TextLayout,
   halfWidthPx: number,
   halfOffsetX: number,
 ): string {
-  const cornerW = half.corner.width;
-  const cornerH = half.corner.height;
-  const spanW = halfWidthPx - 2 * cornerW;
-  const spanH = style.height - 2 * cornerH;
-  const x = cornerW + style.padding + (spanW - 2 * style.padding - layout.width) / 2 + halfOffsetX;
-  const baselineY = cornerH + spanH / 2 + (layout.ascenderPx + layout.descenderPx) / 2;
+  const { width } = style.border;
+  const spanW = halfWidthPx - width.left - width.right;
+  const spanH = style.height - width.top - width.bottom;
+  const x =
+    halfOffsetX +
+    width.left +
+    style.padding.left +
+    (spanW - style.padding.left - style.padding.right - layout.width) / 2;
+  const baselineY = width.top + spanH / 2 + (layout.ascenderPx + layout.descenderPx) / 2;
   return `<path d="${layout.path}" transform="translate(${x}, ${baselineY})" fill="${style.font.color}"/>`;
 }
 
@@ -156,8 +182,8 @@ export class BadgeComposer {
   static compose(style: StyleDefinition, left: string, right: string): string {
     const leftLayout = TextShaper.layout(left, style.font);
     const rightLayout = TextShaper.layout(right, style.font);
-    const leftHalfWidth = halfWidthOf(style.halves.left, style, leftLayout.width);
-    const rightHalfWidth = halfWidthOf(style.halves.right, style, rightLayout.width);
+    const leftHalfWidth = halfWidthOf(style, leftLayout.width);
+    const rightHalfWidth = halfWidthOf(style, rightLayout.width);
     const leftFrame = renderHalf(
       style.halves.left,
       style,
@@ -175,8 +201,8 @@ export class BadgeComposer {
       9,
     );
     const texts =
-      renderText(style.halves.left, style, leftLayout, leftHalfWidth, 0) +
-      renderText(style.halves.right, style, rightLayout, rightHalfWidth, leftHalfWidth);
+      renderText(style, leftLayout, leftHalfWidth, 0) +
+      renderText(style, rightLayout, rightHalfWidth, leftHalfWidth);
     const width = leftHalfWidth + rightHalfWidth;
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${style.height}" viewBox="0 0 ${width} ${style.height}">` +
       `<defs>${leftFrame.defs}${rightFrame.defs}</defs>` +
