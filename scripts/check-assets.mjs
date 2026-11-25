@@ -7,19 +7,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const manifestPath = path.join(root, 'assets', 'templates', 'hermit-frame', 'manifest.json');
+const templateDir = path.join(root, 'assets', 'templates', 'hermit-frame');
+const manifestPath = path.join(templateDir, 'manifest.json');
 
-const EXPECTED_LEFT_REGIONS = [
-  'topLeft',
-  'topRight',
-  'bottomLeft',
-  'bottomRight',
-  'top',
-  'bottom',
-  'left',
-  'right',
-  'center',
-];
+const EXPECTED_HALVES = {
+  left: { file: 'left-half.svg', viewBox: '251 30 309 181' },
+  right: { file: 'right-half.svg', viewBox: '560 30 309 181' },
+};
 
 let failures = 0;
 const fail = (msg) => {
@@ -43,40 +37,70 @@ try {
 }
 
 if (manifest.id !== 'hermit-frame') {
-  fail(`manifest id is ${JSON.stringify(manifest.id)}, expected "herit-frame"`);
+  fail(`manifest id is ${JSON.stringify(manifest.id)}, expected "hermit-frame"`);
+}
+if (manifest.height !== 181) {
+  fail(`manifest height is ${JSON.stringify(manifest.height)}, expected 181`);
+}
+if (manifest.padding !== 12) {
+  fail(`manifest padding is ${JSON.stringify(manifest.padding)}, expected 12`);
+}
+if (manifest.minHalfWidth !== 309) {
+  fail(`manifest minHalfWidth is ${JSON.stringify(manifest.minHalfWidth)}, expected 309`);
+}
+if (manifest.font?.size !== 50) {
+  fail(`manifest font.size is ${JSON.stringify(manifest.font?.size)}, expected 50`);
 }
 
 const halves = manifest.halves || {};
-const leftRegions = halves.left && halves.left.regions;
-const leftKeys = leftRegions ? Object.keys(leftRegions) : [];
-const sorted = (a) => [...a].sort();
-if (JSON.stringify(sorted(leftKeys)) !== JSON.stringify(sorted(EXPECTED_LEFT_REGIONS))) {
-  fail(
-    `halves.left.regions has ${leftKeys.length} keys [${leftKeys.join(', ')}]; expected exactly ${EXPECTED_LEFT_REGIONS.length} [${EXPECTED_LEFT_REGIONS.join(', ')}]`
-  );
+for (const [side, expected] of Object.entries(EXPECTED_HALVES)) {
+  const half = halves[side];
+  if (!half) {
+    fail(`halves.${side} missing`);
+    continue;
+  }
+  if (half.file !== expected.file) {
+    fail(`halves.${side}.file is ${JSON.stringify(half.file)}, expected "${expected.file}"`);
+  }
+  if ('regions' in half) {
+    fail(`halves.${side}.regions is stale; manifest must describe geometry only`);
+  }
+
+  const file = path.resolve(templateDir, String(half.file));
+  if (!fs.existsSync(file)) {
+    fail(`${side}: file missing: ${rel(file)}`);
+    continue;
+  }
+  const stat = fs.statSync(file);
+  if (stat.size === 0) {
+    fail(`${side}: file is empty: ${rel(file)}`);
+    continue;
+  }
+  const content = fs.readFileSync(file, 'utf8');
+  const svgTags = content.match(/<svg\b/g) || [];
+  if (svgTags.length !== 1) {
+    fail(`${side}: expected exactly one <svg> tag, found ${svgTags.length}: ${rel(file)}`);
+  }
+  if (!content.startsWith('<svg')) {
+    fail(`${side}: file is not a single-root <svg> document: ${rel(file)}`);
+  }
+  if (!content.trimEnd().endsWith('</svg>')) {
+    fail(`${side}: file has no closing </svg>: ${rel(file)}`);
+  }
+  const viewBox = content.match(/<svg\b[^>]*\bviewBox="([^"]*)"/)?.[1];
+  if (viewBox !== expected.viewBox) {
+    fail(`${side}: viewBox is ${JSON.stringify(viewBox)}, expected "${expected.viewBox}"`);
+  }
 }
 
-// Every referenced slice file must exist, be non-empty, and contain no <svg tag.
-for (const [half, halfObj] of Object.entries(halves)) {
-  const regions = halfObj && halfObj.regions;
-  for (const [regionName, region] of Object.entries(regions || {})) {
-    const file = path.resolve(path.dirname(manifestPath), region.file);
-    if (!fs.existsSync(file)) {
-      fail(`${half}/${regionName}: file missing: ${rel(file)}`);
-      continue;
-    }
-    const stat = fs.statSync(file);
-    if (stat.size === 0) {
-      fail(`${half}/${regionName}: file is empty: ${rel(file)}`);
-    }
-    const content = fs.readFileSync(file, 'utf8');
-    if (content.includes('<svg')) {
-      fail(`${half}/${regionName}: slice file contains "<svg": ${rel(file)}`);
-    }
+for (const dirName of ['left', 'right']) {
+  const dir = path.join(templateDir, dirName);
+  if (fs.existsSync(dir)) {
+    fail(`obsolete slice directory still exists: ${rel(dir)}`);
   }
 }
 
 if (failures === 0) {
-  console.log(`ok: hermit-frame asset check passed (${leftKeys.length} regions in halves.left)`);
+  console.log('ok: hermit-frame asset check passed');
 }
 process.exit(failures === 0 ? 0 : 1);

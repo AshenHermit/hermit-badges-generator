@@ -1,11 +1,5 @@
 {
   "id": "hermit-frame",
-  "viewBox": {
-    "x": 251,
-    "y": 30,
-    "width": 618,
-    "height": 181
-  },
   "height": 181,
   "padding": 12,
   "minHalfWidth": 309,
@@ -25,71 +19,7 @@
         "width": 40,
         "height": 40
       },
-      "regions": {
-        "topLeft": {
-          "x": 251,
-          "y": 30,
-          "width": 40,
-          "height": 40,
-          "file": "left/top-left.svg"
-        },
-        "topRight": {
-          "x": 520,
-          "y": 30,
-          "width": 40,
-          "height": 40,
-          "file": "left/top-right.svg"
-        },
-        "bottomLeft": {
-          "x": 251,
-          "y": 171,
-          "width": 40,
-          "height": 40,
-          "file": "left/bottom-left.svg"
-        },
-        "bottomRight": {
-          "x": 520,
-          "y": 171,
-          "width": 40,
-          "height": 40,
-          "file": "left/bottom-right.svg"
-        },
-        "top": {
-          "x": 291,
-          "y": 30,
-          "width": 229,
-          "height": 40,
-          "file": "left/top.svg"
-        },
-        "bottom": {
-          "x": 291,
-          "y": 171,
-          "width": 229,
-          "height": 40,
-          "file": "left/bottom.svg"
-        },
-        "left": {
-          "x": 251,
-          "y": 70,
-          "width": 40,
-          "height": 101,
-          "file": "left/left.svg"
-        },
-        "right": {
-          "x": 520,
-          "y": 70,
-          "width": 40,
-          "height": 101,
-          "file": "left/right.svg"
-        },
-        "center": {
-          "x": 291,
-          "y": 70,
-          "width": 229,
-          "height": 101,
-          "file": "left/center.svg"
-        }
-      }
+      "file": "left-half.svg"
     },
     "right": {
       "origin": {
@@ -101,71 +31,7 @@
         "width": 40,
         "height": 40
       },
-      "regions": {
-        "topLeft": {
-          "x": 560,
-          "y": 30,
-          "width": 40,
-          "height": 40,
-          "file": "right/top-left.svg"
-        },
-        "topRight": {
-          "x": 829,
-          "y": 30,
-          "width": 40,
-          "height": 40,
-          "file": "right/top-right.svg"
-        },
-        "bottomLeft": {
-          "x": 560,
-          "y": 171,
-          "width": 40,
-          "height": 40,
-          "file": "right/bottom-left.svg"
-        },
-        "bottomRight": {
-          "x": 829,
-          "y": 171,
-          "width": 40,
-          "height": 40,
-          "file": "right/bottom-right.svg"
-        },
-        "top": {
-          "x": 600,
-          "y": 30,
-          "width": 229,
-          "height": 40,
-          "file": "right/top.svg"
-        },
-        "bottom": {
-          "x": 600,
-          "y": 171,
-          "width": 229,
-          "height": 40,
-          "file": "right/bottom.svg"
-        },
-        "left": {
-          "x": 560,
-          "y": 70,
-          "width": 40,
-          "height": 101,
-          "file": "right/left.svg"
-        },
-        "right": {
-          "x": 829,
-          "y": 70,
-          "width": 40,
-          "height": 101,
-          "file": "right/right.svg"
-        },
-        "center": {
-          "x": 600,
-          "y": 70,
-          "width": 229,
-          "height": 101,
-          "file": "right/center.svg"
-        }
-      }
+      "file": "right-half.svg"
     }
   }
 }

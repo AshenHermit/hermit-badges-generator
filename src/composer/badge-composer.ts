@@ -1,97 +1,113 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  HalfDefinition,
-  RegionName,
-  SliceRegion,
-  StyleDefinition,
-} from '../styles/style-definition';
+import { HalfDefinition, StyleDefinition } from '../styles/style-definition';
 import { TextLayout, TextShaper } from './text-shaper';
-import { tileSpan } from './nine-slice';
 
 const TEMPLATES_DIR = path.resolve(process.cwd(), 'assets/templates');
+const fragmentCache = new Map<string, string>();
 
-const REGION_ORDER: RegionName[] = [
+type RegionKey =
+  | 'topLeft'
+  | 'topRight'
+  | 'bottomLeft'
+  | 'bottomRight'
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'center';
+
+const REGION_ORDER: RegionKey[] = [
   'topLeft',
   'topRight',
   'bottomLeft',
   'bottomRight',
   'top',
-  'left',
-  'center',
-  'right',
   'bottom',
+  'left',
+  'right',
+  'center',
 ];
 
-const CORNER_REGIONS = new Set<RegionName>(['topLeft', 'topRight', 'bottomLeft', 'bottomRight']);
+interface Window {
+  nativeX: number;
+  nativeY: number;
+  nativeWidth: number;
+  nativeHeight: number;
+  rectX: number;
+  rectY: number;
+  rectWidth: number;
+  rectHeight: number;
+}
 
-function isCorner(name: RegionName): boolean {
-  return CORNER_REGIONS.has(name);
+function dataUri(styleId: string, file: string): string {
+  const filePath = path.resolve(TEMPLATES_DIR, styleId, file);
+  let raw = fragmentCache.get(filePath);
+  if (raw === undefined) {
+    raw = fs.readFileSync(filePath, 'utf8');
+    fragmentCache.set(filePath, raw);
+  }
+  return `data:image/svg+xml;base64,${Buffer.from(raw).toString('base64')}`;
 }
 
 function halfWidthOf(half: HalfDefinition, style: StyleDefinition, textWidth: number): number {
   return Math.max(style.minHalfWidth, 2 * half.corner.width + textWidth + 2 * style.padding);
 }
 
-function sliceFragment(styleId: string, file: string): string {
-  return fs.readFileSync(path.resolve(TEMPLATES_DIR, styleId, file), 'utf8');
-}
-
-function renderCorner(style: StyleDefinition, region: SliceRegion, x: number, y: number): string {
-  return `<svg x="${x}" y="${y}" width="${region.width}" height="${region.height}" viewBox="${region.x} ${region.y} ${region.width} ${region.height}">${sliceFragment(
-    style.id,
-    region.file,
-  )}</svg>`;
-}
-
-function renderElastic(
-  style: StyleDefinition,
+function windowsOf(
   half: HalfDefinition,
-  name: RegionName,
-  region: SliceRegion,
-  cornerW: number,
-  spanW: number,
-  spanH: number,
+  style: StyleDefinition,
   halfWidthPx: number,
   halfOffsetX: number,
-): string {
+): Record<RegionKey, Window> {
+  const cornerW = half.corner.width;
   const cornerH = half.corner.height;
-  let vpX: number;
-  let vpY: number;
-  let vpW: number;
-  let vpH: number;
-  if (name === 'top' || name === 'bottom') {
-    vpX = halfOffsetX + cornerW;
-    vpY = region.y - style.viewBox.y;
-    vpW = spanW;
-    vpH = cornerH;
-  } else if (name === 'left' || name === 'right') {
-    vpX = name === 'right' ? halfOffsetX + halfWidthPx - cornerW : halfOffsetX;
-    vpY = cornerH;
-    vpW = cornerW;
-    vpH = spanH;
-  } else {
-    vpX = halfOffsetX + cornerW;
-    vpY = cornerH;
-    vpW = spanW;
-    vpH = spanH;
-  }
-  const tileW = region.width;
-  const tileH = region.height;
-  const tiles: string[] = [];
-  const xCount = tileSpan(vpW, tileW);
-  const yCount = tileSpan(vpH, tileH);
-  for (let j = 0; j < yCount; j++) {
-    for (let i = 0; i < xCount; i++) {
-      tiles.push(
-        `<svg x="${i * tileW}" y="${j * tileH}" width="${tileW}" height="${tileH}" viewBox="${region.x} ${region.y} ${tileW} ${tileH}">${sliceFragment(
-          style.id,
-          region.file,
-        )}</svg>`,
-      );
-    }
-  }
-  return `<svg x="${vpX}" y="${vpY}" width="${vpW}" height="${vpH}" viewBox="0 0 ${vpW} ${vpH}">${tiles.join('')}</svg>`;
+  const nativeRightX = half.width - cornerW;
+  const nativeBottomY = style.height - cornerH;
+  const nativeSpanW = half.width - 2 * cornerW;
+  const nativeSpanH = style.height - 2 * cornerH;
+  const spanW = halfWidthPx - 2 * cornerW;
+  const rightX = halfOffsetX + halfWidthPx - cornerW;
+  const window = (
+    nativeX: number,
+    nativeY: number,
+    nativeWidth: number,
+    nativeHeight: number,
+    rectX: number,
+    rectY: number,
+    rectWidth: number,
+    rectHeight: number,
+  ): Window => ({ nativeX, nativeY, nativeWidth, nativeHeight, rectX, rectY, rectWidth, rectHeight });
+
+  return {
+    topLeft: window(0, 0, cornerW, cornerH, halfOffsetX, 0, cornerW, cornerH),
+    topRight: window(nativeRightX, 0, cornerW, cornerH, rightX, 0, cornerW, cornerH),
+    bottomLeft: window(0, nativeBottomY, cornerW, cornerH, halfOffsetX, nativeBottomY, cornerW, cornerH),
+    bottomRight: window(nativeRightX, nativeBottomY, cornerW, cornerH, rightX, nativeBottomY, cornerW, cornerH),
+    top: window(cornerW, 0, nativeSpanW, cornerH, halfOffsetX + cornerW, 0, spanW, cornerH),
+    bottom: window(
+      cornerW,
+      nativeBottomY,
+      nativeSpanW,
+      cornerH,
+      halfOffsetX + cornerW,
+      nativeBottomY,
+      spanW,
+      cornerH,
+    ),
+    left: window(0, cornerH, cornerW, nativeSpanH, halfOffsetX, cornerH, cornerW, nativeSpanH),
+    right: window(nativeRightX, cornerH, cornerW, nativeSpanH, rightX, cornerH, cornerW, nativeSpanH),
+    center: window(
+      cornerW,
+      cornerH,
+      nativeSpanW,
+      nativeSpanH,
+      halfOffsetX + cornerW,
+      cornerH,
+      spanW,
+      nativeSpanH,
+    ),
+  };
 }
 
 function renderHalf(
@@ -99,31 +115,25 @@ function renderHalf(
   style: StyleDefinition,
   halfWidthPx: number,
   halfOffsetX: number,
-): string {
-  const cornerW = half.corner.width;
-  const cornerH = half.corner.height;
-  const spanW = halfWidthPx - 2 * cornerW;
-  const spanH = style.height - 2 * cornerH;
-  const parts: string[] = [];
+  uri: string,
+  idOffset: number,
+): { defs: string; rects: string } {
+  const windows = windowsOf(half, style, halfWidthPx, halfOffsetX);
+  const defs: string[] = [];
+  const rects: string[] = [];
   for (const name of REGION_ORDER) {
-    const region = half.regions[name];
-    if (isCorner(name)) {
-      const x =
-        name === 'topLeft' || name === 'bottomLeft'
-          ? halfOffsetX
-          : halfOffsetX + halfWidthPx - cornerW;
-      const y =
-        name === 'bottomLeft' || name === 'bottomRight'
-          ? style.height - cornerH
-          : region.y - style.viewBox.y;
-      parts.push(renderCorner(style, region, x, y));
-    } else {
-      parts.push(
-        renderElastic(style, half, name, region, cornerW, spanW, spanH, halfWidthPx, halfOffsetX),
-      );
-    }
+    const region = windows[name];
+    const id = `p${idOffset + rects.length}`;
+    defs.push(
+      `<pattern id="${id}" patternUnits="userSpaceOnUse" x="${region.rectX}" y="${region.rectY}" width="${region.nativeWidth}" height="${region.nativeHeight}">` +
+        `<image href="${uri}" x="${-region.nativeX}" y="${-region.nativeY}" width="${half.width}" height="${style.height}"/>` +
+        `</pattern>`,
+    );
+    rects.push(
+      `<rect x="${region.rectX}" y="${region.rectY}" width="${region.rectWidth}" height="${region.rectHeight}" fill="url(#${id})"/>`,
+    );
   }
-  return parts.join('');
+  return { defs: defs.join(''), rects: rects.join('') };
 }
 
 function renderText(
@@ -148,13 +158,28 @@ export class BadgeComposer {
     const rightLayout = TextShaper.layout(right, style.font);
     const leftHalfWidth = halfWidthOf(style.halves.left, style, leftLayout.width);
     const rightHalfWidth = halfWidthOf(style.halves.right, style, rightLayout.width);
-    const backgrounds =
-      renderHalf(style.halves.left, style, leftHalfWidth, 0) +
-      renderHalf(style.halves.right, style, rightHalfWidth, leftHalfWidth);
+    const leftFrame = renderHalf(
+      style.halves.left,
+      style,
+      leftHalfWidth,
+      0,
+      dataUri(style.id, style.halves.left.file),
+      0,
+    );
+    const rightFrame = renderHalf(
+      style.halves.right,
+      style,
+      rightHalfWidth,
+      leftHalfWidth,
+      dataUri(style.id, style.halves.right.file),
+      9,
+    );
     const texts =
       renderText(style.halves.left, style, leftLayout, leftHalfWidth, 0) +
       renderText(style.halves.right, style, rightLayout, rightHalfWidth, leftHalfWidth);
     const width = leftHalfWidth + rightHalfWidth;
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${style.height}" viewBox="0 0 ${width} ${style.height}">${backgrounds}${texts}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${style.height}" viewBox="0 0 ${width} ${style.height}">` +
+      `<defs>${leftFrame.defs}${rightFrame.defs}</defs>` +
+      `${leftFrame.rects}${rightFrame.rects}${texts}</svg>`;
   }
 }

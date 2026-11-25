@@ -1,6 +1,6 @@
 # badge-generator
 
-NestJS service that renders frame-based SVG badges to PNG. Text is shaped locally with opentype.js, the frame is composed by 9-slice tile repetition, and the SVG is rasterized deterministically with resvg.
+NestJS service that renders frame-based SVG badges to PNG. Text is shaped locally with opentype.js, the frame is composed from two half-frame images repeated through SVG `<pattern>` tiles, and the SVG is rasterized deterministically with resvg.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ npm install
 
 ## Build assets
 
-Generate the 9-slice SVG fragments from the source frame before starting the app:
+Generate the two half-frame SVG images (`left-half.svg` and `right-half.svg`) from the source frame before starting the app:
 
 ```bash
 npm run assets:build
