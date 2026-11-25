@@ -1,3 +1,8 @@
+export interface RenderInput {
+  left: string;
+  right: string;
+}
+
 export interface Renderer {
-  render(svg: string): Promise<Buffer>;
+  render(input: RenderInput): Promise<Buffer>;
 }

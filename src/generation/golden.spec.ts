@@ -23,6 +23,8 @@ describe('golden PNG', () => {
     await moduleRef.close();
   });
 
+  // Golden bytes are regenerated in a later task; this currently exercises the
+  // real Chromium render path and reports the stale committed PNG as a failure.
   it('matches the committed hermit-frame PNG byte for byte', async () => {
     const query = new GenerateQueryDto();
     query.left = 'Hello';
@@ -34,5 +36,5 @@ describe('golden PNG', () => {
     const expected = fs.readFileSync(GOLDEN_PATH);
 
     expect(actual.equals(expected)).toBe(true);
-  });
+  }, 30000);
 });

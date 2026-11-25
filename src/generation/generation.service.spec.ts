@@ -1,25 +1,25 @@
-import { BadgeComposer } from '../composer/badge-composer';
-import { StyleRegistry } from '../styles/style.registry';
-import { RendererRegistry } from '../rendering/renderer.registry';
-import { Renderer } from '../rendering/renderer';
-import { CacheKeyFactory } from '../cache/cache-key.factory';
 import { BadgeCache } from '../cache/badge-cache';
-import { StyleDefinition } from '../styles/style-definition';
+import { CacheKeyFactory } from '../cache/cache-key.factory';
+import { BrowserLike, BrowserRenderer, PageLike } from '../rendering/browser-renderer';
+import { RendererRegistry } from '../rendering/renderer.registry';
+import { TemplateService } from '../rendering/template.service';
 import { GenerateQueryDto } from './dto/generate-query.dto';
 import { GenerationService } from './generation.service';
 
 describe('GenerationService', () => {
   const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  const SVG = '<svg xmlns="http://www.w3.org/2000/svg"></svg>';
-  const style = { id: 'hermit-frame' } as StyleDefinition;
+  const TEMP_HTML = 'C:\\badges\\template-generation.html';
+  const originalFreshTemplate = process.env.FRESH_TEMPLATE;
+  const originalFreshManifest = process.env.FRESH_MANIFEST;
 
-  let styleRegistry: { get: jest.Mock };
   let badgeCache: { get: jest.Mock; set: jest.Mock };
   let rendererRegistry: { get: jest.Mock };
-  let renderer: Renderer;
-  let service: GenerationService;
-  let composeSpy: jest.SpyInstance;
+  let renderer: BrowserRenderer;
+  let render: jest.SpyInstance;
+  let templateService: TemplateService;
+  let prepare: jest.SpyInstance;
   let createKeySpy: jest.SpyInstance;
+  let service: GenerationService;
 
   function queryWith(overrides?: Partial<GenerateQueryDto>): GenerateQueryDto {
     const query = new GenerateQueryDto();
@@ -30,32 +30,47 @@ describe('GenerationService', () => {
     return query;
   }
 
+  function fakeBrowser(): BrowserLike {
+    const page = {
+      goto: jest.fn().mockResolvedValue(undefined),
+      evaluate: jest.fn().mockResolvedValue(true),
+      locator: jest.fn().mockReturnValue({ screenshot: jest.fn().mockResolvedValue(PNG) }),
+      close: jest.fn().mockResolvedValue(undefined),
+    } as unknown as PageLike;
+    return {
+      newPage: jest.fn().mockResolvedValue(page),
+      close: jest.fn().mockResolvedValue(undefined),
+    } as unknown as BrowserLike;
+  }
+
   beforeEach(() => {
-    jest.clearAllMocks();
-    styleRegistry = { get: jest.fn().mockReturnValue(style) };
+    delete process.env.FRESH_TEMPLATE;
+    delete process.env.FRESH_MANIFEST;
     badgeCache = { get: jest.fn().mockReturnValue(undefined), set: jest.fn() };
-    renderer = { render: jest.fn().mockResolvedValue(PNG) };
+    templateService = new TemplateService();
+    prepare = jest.spyOn(templateService, 'prepare').mockReturnValue(TEMP_HTML);
+    renderer = new BrowserRenderer(templateService, fakeBrowser());
+    render = jest.spyOn(renderer, 'render');
     rendererRegistry = { get: jest.fn().mockReturnValue(renderer) };
     service = new GenerationService(
-      styleRegistry as unknown as StyleRegistry,
       badgeCache as unknown as BadgeCache,
       rendererRegistry as unknown as RendererRegistry,
     );
-    composeSpy = jest.spyOn(BadgeComposer, 'compose').mockReturnValue(SVG);
     createKeySpy = jest
       .spyOn(CacheKeyFactory, 'create')
       .mockReturnValue('cache-key');
   });
 
   afterEach(() => {
-    composeSpy.mockRestore();
     createKeySpy.mockRestore();
+    if (originalFreshTemplate === undefined) delete process.env.FRESH_TEMPLATE;
+    else process.env.FRESH_TEMPLATE = originalFreshTemplate;
+    if (originalFreshManifest === undefined) delete process.env.FRESH_MANIFEST;
+    else process.env.FRESH_MANIFEST = originalFreshManifest;
   });
 
-  it('composes, renders and caches on a cache miss', async () => {
-    const query = queryWith();
-
-    const result = await service.generate(query);
+  it('renders and caches on a cache miss', async () => {
+    const result = await service.generate(queryWith());
 
     expect(result).toBe(PNG);
     expect(CacheKeyFactory.create).toHaveBeenCalledWith(
@@ -63,11 +78,9 @@ describe('GenerationService', () => {
       expect.objectContaining({ left: 'Hello', right: 'World' }),
     );
     expect(badgeCache.get).toHaveBeenCalledWith('cache-key');
-    expect(styleRegistry.get).toHaveBeenCalledWith('hermit-frame');
-    expect(BadgeComposer.compose).toHaveBeenCalledWith(style, 'Hello', 'World');
     expect(rendererRegistry.get).toHaveBeenCalledWith('png');
-    expect(renderer.render).toHaveBeenCalledWith(SVG);
-    expect(badgeCache.set).toHaveBeenCalledTimes(1);
+    expect(render).toHaveBeenCalledWith({ left: 'Hello', right: 'World' });
+    expect(prepare).toHaveBeenCalledTimes(1);
     expect(badgeCache.set).toHaveBeenCalledWith('cache-key', PNG);
   });
 
@@ -77,30 +90,41 @@ describe('GenerationService', () => {
     const result = await service.generate(queryWith());
 
     expect(result).toBe(PNG);
-    expect(styleRegistry.get).not.toHaveBeenCalled();
-    expect(BadgeComposer.compose).not.toHaveBeenCalled();
-    expect(renderer.render).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
+    expect(prepare).not.toHaveBeenCalled();
     expect(badgeCache.set).not.toHaveBeenCalled();
   });
 
-  it('bypasses the response cache when FRESH_MANIFEST is set', async () => {
-    const previous = process.env.FRESH_MANIFEST;
-    process.env.FRESH_MANIFEST = '1';
+  it('bypasses the response cache when FRESH_TEMPLATE is set', async () => {
+    process.env.FRESH_TEMPLATE = '1';
     badgeCache.get.mockReturnValue(PNG);
-    try {
-      const freshService = new GenerationService(
-        styleRegistry as unknown as StyleRegistry,
-        badgeCache as unknown as BadgeCache,
-        rendererRegistry as unknown as RendererRegistry,
-      );
-      await freshService.generate(queryWith());
-      expect(badgeCache.get).not.toHaveBeenCalled();
-      expect(styleRegistry.get).toHaveBeenCalledWith('hermit-frame');
-      expect(renderer.render).toHaveBeenCalledWith(SVG);
-      expect(badgeCache.set).not.toHaveBeenCalled();
-    } finally {
-      if (previous === undefined) delete process.env.FRESH_MANIFEST;
-      else process.env.FRESH_MANIFEST = previous;
-    }
+    const freshService = new GenerationService(
+      badgeCache as unknown as BadgeCache,
+      rendererRegistry as unknown as RendererRegistry,
+    );
+
+    await freshService.generate(queryWith());
+    await freshService.generate(queryWith({ right: 'There' }));
+
+    expect(badgeCache.get).not.toHaveBeenCalled();
+    expect(badgeCache.set).not.toHaveBeenCalled();
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(prepare).toHaveBeenNthCalledWith(1, 'Hello', 'World');
+    expect(prepare).toHaveBeenNthCalledWith(2, 'Hello', 'There');
+  });
+
+  it('accepts FRESH_MANIFEST as an alias for FRESH_TEMPLATE', async () => {
+    process.env.FRESH_MANIFEST = 'yes';
+    badgeCache.get.mockReturnValue(PNG);
+    const freshService = new GenerationService(
+      badgeCache as unknown as BadgeCache,
+      rendererRegistry as unknown as RendererRegistry,
+    );
+
+    await freshService.generate(queryWith());
+
+    expect(badgeCache.get).not.toHaveBeenCalled();
+    expect(badgeCache.set).not.toHaveBeenCalled();
+    expect(prepare).toHaveBeenCalledTimes(1);
   });
 });
