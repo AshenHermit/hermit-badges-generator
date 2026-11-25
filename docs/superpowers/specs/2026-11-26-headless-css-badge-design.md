@@ -45,16 +45,15 @@ Playwright Chromium is already cached locally. The executable path is resolved t
 Create `assets/templates/hermit-frame/template.html` as a complete, self-contained document:
 
 - `<style>` with `@font-face` pointing at `../fonts/Lipstick-Rage.ttf`.
-- `.github-badge { display: flex; width: fit-content; box-sizing: border-box; border-style: solid; border-image-repeat: repeat; font-family: "Lipstick Rage", sans-serif; font-size: 50px; line-height: 1.5; color: #fff; }`.
-- `.badge-left-part` with the exact Storybook CSS from `my-ui-components/src/styles/badge.css`:
-  `border-image: url("./left-half.svg") 66 10 48 53 fill / 66px 10px 48px 53px;`
-  `padding: 49px 20px 41px 53px;`
-- `.badge-right-part`:
-  `border-image: url("./right-half.svg") 66 53 48 25 fill / 66px 53px 48px 25px;`
-  `padding: 49px 68px 41px 35px;`
+- The outer wrapper carries `.github-badge`; the two children carry `.badge-left-part` and `.badge-right-part`. This matches Storybook. `border-image-repeat` is part of the `border-image` shorthand on each half; it is not reset and needs no separate rule.
+- Exact CSS supplied by the user is authoritative:
+  `.github-badge { font-family: "Lipstick Rage", sans-serif; --panel-face: #808080; }`
+  `.badge-left-part { border-image: url("./left-half.svg") 66 10 48 53 fill / 66px 10px 48px 53px repeat; padding: 49px 20px 41px 53px; }`
+  `.badge-right-part { border-image: url("./right-half.svg") 66 53 48 25 fill / 66px 53px 48px 25px repeat; padding: 49px 68px 41px 35px; }`
+- The wrapper also sets `display: flex; width: fit-content; box-sizing: border-box;` and the page body inherits Storybook's `#e8e6df` text colour and `line-height: 1.625`; these reproduce Storybook's computed values without changing the supplied badge CSS.
 - Text nodes `{{LEFT}}` and `{{RIGHT}}` as injection points.
 - No manifest, no numeric style registry, no SVG-pattern composer, no text shaper, no resvg renderer. Remove or replace those modules; do not leave dead code.
-- Paths are relative to the template file; the browser loads it from `file://`, so no HTTP server is needed.
+- Paths are relative to the template file; the browser loads it from `file://`, so no HTTP server is needed. Chromium is launched with `--allow-file-access-from-files` so the relative `@font-face` and SVG URLs load; the golden test asserts `document.fonts.check('50px "Lipstick Rage"')` so a silent fallback to sans-serif cannot pass.
 
 ### Rendering pipeline
 
