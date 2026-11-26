@@ -38,3 +38,57 @@ Root `.env` (copy `.env.example`; never commit `.env`) supplies:
 Backend-local development defaults are documented in `backend/.env.example`;
 production cache and Redis values are injected by compose rather than read
 from that file.
+
+`REDIS_PASSWORD` is passed **unquoted** to
+`redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}`, so use a single
+token with no whitespace and no shell metacharacters (letters, digits, `-`, `_`
+are safe). A missing `.env`, or an empty `REDIS_PASSWORD`, is not caught by
+`docker compose config`: Compose substitutes an empty value, Redis starts with
+a malformed/empty `--requirepass`, and the stack fails later at Redis
+authentication rather than at config time. Both the CI preflight and the host
+script reject an empty key before the stack is touched.
+
+## How deployment works
+
+`.github/workflows/deploy.yml` runs on a push to `master` or via
+`workflow_dispatch`:
+
+1. `verify` — `pnpm install --frozen-lockfile`, assets, unit tests and build.
+2. `build` — builds the `backend-prod` and `caddy-prod` targets and pushes
+   immutable `sha-<short>` tags plus `latest` to GHCR.
+3. `deploy` — validates the env locally **before** any remote step, creates the
+   deploy directory on the host, writes `.env` from `PROD_ENV` with the two
+   `sha-*` tags appended, copies `docker-compose.prod.yml`, and pipes
+   `scripts/deploy-remote.sh` to the host.
+
+The host never runs `git`, `pnpm`, or a Docker build: it logs into GHCR with
+the workflow token (`--password-stdin`, never logged), pulls the two images,
+and recreates the stack with `docker compose up -d --force-recreate --wait`.
+
+### Prerequisites
+
+- `master` pushed to `origin` (the push trigger and `workflow_dispatch`
+  default both use `master`).
+- GHCR `packages: write` for the built-in `GITHUB_TOKEN`; the `deploy` job uses
+  `packages: read` for the host pull.
+- Repository secrets: `SSH_PRIVATE_KEY` (root login), `PROD_ENV` (the root env
+  values above). `SSH_PORT` is optional and defaults to `22`.
+- The external `shared-net` Docker network must exist on the host.
+
+The first deploy creates `/home/hermit-badges-generator`. This is a fresh
+install: there is no data migration and no volume preservation step.
+
+## Rollback
+
+- Preferred: run the workflow manually (`workflow_dispatch`) with `ref` set to
+  an older commit. CI rebuilds that SHA, tags it `sha-<short>` and redeploys it.
+- Immediate: on the host, edit `.env` so `BACKEND_IMAGE` and `CADDY_IMAGE`
+  point at a previous `sha-<short>` tag in the same GHCR repository, then run
+  `docker compose --project-directory /home/hermit-badges-generator --env-file
+  /home/hermit-badges-generator/.env -f
+  /home/hermit-badges-generator/docker-compose.prod.yml up -d --force-recreate
+  --wait`. The last `BACKEND_IMAGE`/`CADDY_IMAGE` lines in `.env` win.
+
+Design and implementation record:
+[spec](docs/superpowers/specs/2026-11-26-monorepo-deploy-design.md),
+[plan](docs/superpowers/plans/2026-11-26-monorepo-deploy.md).
