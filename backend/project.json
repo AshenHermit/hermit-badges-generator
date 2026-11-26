@@ -41,13 +41,6 @@
         "command": "pnpm run start",
         "cwd": "backend"
       }
-    },
-    "assets:build": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "pnpm run assets:build",
-        "cwd": "backend"
-      }
     }
   }
 }

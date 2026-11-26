@@ -4,7 +4,6 @@ import * as path from 'path';
 import { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../app.module';
-import { GenerateQueryDto } from './dto/generate-query.dto';
 import { GenerationService } from './generation.service';
 
 const GOLDEN_PATH = path.resolve(process.cwd(), 'test/golden/hermit-frame.png');
@@ -23,19 +22,20 @@ describe('golden PNG', () => {
     await moduleRef.close();
   });
 
-  // The committed golden PNG is current for the CSS render plus the sharp resize
-  // to the default 60px: regenerated from this build with left=Hello&right=World
-  // and verified byte for byte here.
+  // The committed golden PNG is current for the template render plus the sharp
+  // resize to the default 60px: left=Hello&right=World with all color defaults.
   it('matches the committed hermit-frame PNG byte for byte', async () => {
-    const query = new GenerateQueryDto();
-    query.left = 'Hello';
-    query.right = 'World';
-    query.style = 'hermit-frame';
-    query.format = 'png';
-
-    const actual = await service.generate(query);
+    const { image } = await service.generate({
+      template: 'hermit-frame',
+      left: 'Hello',
+      right: 'World',
+    });
     const expected = fs.readFileSync(GOLDEN_PATH);
 
-    expect(actual.equals(expected)).toBe(true);
+    if (process.env.REGENERATE_GOLDEN === '1') {
+      fs.writeFileSync(GOLDEN_PATH, image);
+      console.log(`golden regenerated: ${image.length} bytes`);
+    }
+    expect(image.equals(expected)).toBe(true);
   }, 30000);
 });

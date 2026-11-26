@@ -1,6 +1,6 @@
-import { Controller, Get, Header, Query, Res } from '@nestjs/common';
+import { Controller, Get, Header, Res } from '@nestjs/common';
 import { ApiOperation, ApiProduces, ApiQuery, ApiResponse } from '@nestjs/swagger';
-import { GenerateQueryDto } from './dto/generate-query.dto';
+import { RawQuery } from '../templates/raw-query.decorator';
 import { GenerationService } from './generation.service';
 
 // Nest 11's ExpressAdapter serializes objects returned from handlers with
@@ -14,7 +14,10 @@ export class GenerationController {
 
   @Get()
   @Header('Cache-Control', 'public, max-age=3600')
-  @ApiOperation({ summary: 'Generate a badge image' })
+  @ApiOperation({
+    summary:
+      'Generate a badge image. Template-specific query parameters are listed by GET /api/v1/templates/:id',
+  })
   @ApiProduces('image/png', 'image/webp')
   @ApiResponse({
     status: 200,
@@ -23,9 +26,12 @@ export class GenerationController {
       'image/webp': { schema: { type: 'string', format: 'binary' } },
     },
   })
-  @ApiQuery({ name: 'left', required: true, description: 'Text for the left half' })
-  @ApiQuery({ name: 'right', required: true, description: 'Text for the right half' })
-  @ApiQuery({ name: 'style', required: false, description: 'Badge style', enum: ['hermit-frame'] })
+  @ApiQuery({
+    name: 'template',
+    required: false,
+    description: 'Template id (see GET /api/v1/templates)',
+    schema: { type: 'string', default: 'hermit-frame' },
+  })
   @ApiQuery({ name: 'format', required: false, description: 'Image format', enum: ['png', 'webp'] })
   @ApiQuery({
     name: 'height',
@@ -34,11 +40,11 @@ export class GenerationController {
     schema: { type: 'integer', default: 60 },
   })
   async generate(
-    @Query() query: GenerateQueryDto,
+    @RawQuery() query: Record<string, unknown>,
     @Res() res: ImageResponse,
   ): Promise<Buffer> {
-    const image = await this.generationService.generate(query);
-    res.setHeader('Content-Type', query.format === 'webp' ? 'image/webp' : 'image/png');
+    const { image, format } = await this.generationService.generate(query);
+    res.setHeader('Content-Type', format === 'webp' ? 'image/webp' : 'image/png');
     res.send(image);
     return image;
   }

@@ -1,11 +1,19 @@
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
+import { TemplateDefinition } from '../templates/template-definition';
+import { TemplateManifestService } from '../templates/template-manifest.service';
+import { TemplateParamsService } from '../templates/template-params.service';
 import { BrowserLike, BrowserRenderer, PageLike } from './browser-renderer';
 import { TemplateService } from './template.service';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
 const TEMP_HTML = 'C:\\badges\\template-fake.html';
 const SCREENSHOT_OPTIONS = { path: undefined, type: 'png' as const, omitBackground: true };
+const definition: TemplateDefinition = new TemplateManifestService().get('hermit-frame');
+const values = new TemplateParamsService().resolve(definition, {
+  left: 'Hello',
+  right: 'World',
+});
 
 function fakePage(): {
   page: PageLike;
@@ -49,14 +57,14 @@ describe('BrowserRenderer with an injected browser', () => {
     } as unknown as TemplateService;
     const renderer = new BrowserRenderer(templates);
 
-    const result = await renderer.render({ left: 'Hello', right: 'World' });
+    const result = await renderer.render({ template: definition, values });
 
     expect(launch).toHaveBeenCalledWith({
       executablePath: chromium.executablePath(),
       args: ['--allow-file-access-from-files'],
       headless: true,
     });
-    expect(templates.prepare).toHaveBeenCalledWith('Hello', 'World');
+    expect(templates.prepare).toHaveBeenCalledWith(definition, values);
     expect(goto).toHaveBeenCalledWith(pathToFileURL(TEMP_HTML).href);
     expect(evaluate).toHaveBeenCalledWith(expect.any(Function));
     expect(locator).toHaveBeenCalledWith('.github-badge');
@@ -74,7 +82,7 @@ describe('BrowserRenderer with an injected browser', () => {
     const launch = jest.spyOn(chromium, 'launch');
     const templates = { prepare: jest.fn().mockReturnValue(TEMP_HTML) } as unknown as TemplateService;
 
-    await new BrowserRenderer(templates, injected).render({ left: 'L', right: 'R' });
+    await new BrowserRenderer(templates, injected).render({ template: definition, values });
 
     expect(launch).not.toHaveBeenCalled();
     expect(injected.newPage).toHaveBeenCalledTimes(1);
@@ -112,7 +120,7 @@ describe('BrowserRenderer with real Chromium', () => {
     try {
       const templates = new TemplateService();
       const renderer = new BrowserRenderer(templates, recordingBrowser);
-      const png = await renderer.render({ left: 'Hello', right: 'World' });
+      const png = await renderer.render({ template: definition, values });
 
       expect(fontChecks).toEqual([true]);
       expect(png.subarray(0, 8)).toEqual(

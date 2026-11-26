@@ -4,6 +4,7 @@ import { CacheModule } from './cache/cache.module';
 import { GenerationModule } from './generation/generation.module';
 import { HealthModule } from './health/health.module';
 import { RenderingModule } from './rendering/rendering.module';
+import { TemplatesModule } from './templates/templates.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { RenderingModule } from './rendering/rendering.module';
     RenderingModule,
     CacheModule,
     GenerationModule,
+    TemplatesModule,
     HealthModule,
   ],
 })

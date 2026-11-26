@@ -7,7 +7,6 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "start:dev": "nest start",
-    "assets:build": "node scripts/check-assets.mjs",
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.json --runInBand"
   },

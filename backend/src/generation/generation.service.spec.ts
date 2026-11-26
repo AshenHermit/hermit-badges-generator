@@ -4,7 +4,8 @@ import { BrowserLike, BrowserRenderer, PageLike } from '../rendering/browser-ren
 import { ImageTransformer } from '../rendering/image-transformer';
 import { RendererRegistry } from '../rendering/renderer.registry';
 import { TemplateService } from '../rendering/template.service';
-import { DEFAULT_HEIGHT, GenerateQueryDto } from './dto/generate-query.dto';
+import { TemplateManifestService } from '../templates/template-manifest.service';
+import { TemplateParamsService } from '../templates/template-params.service';
 import { GenerationService } from './generation.service';
 
 describe('GenerationService', () => {
@@ -22,15 +23,23 @@ describe('GenerationService', () => {
   let prepare: jest.SpyInstance;
   let createKeySpy: jest.SpyInstance;
   let service: GenerationService;
+  const manifests = new TemplateManifestService();
+  const definition = manifests.get('hermit-frame');
 
-  function queryWith(overrides?: Partial<GenerateQueryDto>): GenerateQueryDto {
-    const query = new GenerateQueryDto();
-    query.left = overrides?.left ?? 'Hello';
-    query.right = overrides?.right ?? 'World';
-    query.style = overrides?.style ?? 'hermit-frame';
-    query.format = overrides?.format ?? 'png';
-    query.height = overrides?.height ?? DEFAULT_HEIGHT;
-    return query;
+  function queryWith(overrides: Record<string, unknown> = {}): Record<string, string> {
+    // HTTP query strings are always strings; keep unit inputs realistic.
+    const stringified = Object.fromEntries(
+      Object.entries(overrides).map(([key, value]) => [key, String(value)]),
+    );
+    return { left: 'Hello', right: 'World', ...stringified };
+  }
+
+  function expectedValues(overrides: Record<string, string> = {}) {
+    return new TemplateParamsService().resolve(definition, {
+      left: 'Hello',
+      right: 'World',
+      ...overrides,
+    });
   }
 
   function fakeBrowser(): BrowserLike {
@@ -44,6 +53,16 @@ describe('GenerationService', () => {
       newPage: jest.fn().mockResolvedValue(page),
       close: jest.fn().mockResolvedValue(undefined),
     } as unknown as BrowserLike;
+  }
+
+  function makeService(): GenerationService {
+    return new GenerationService(
+      badgeCache as unknown as BadgeCache,
+      rendererRegistry as unknown as RendererRegistry,
+      transformer as unknown as ImageTransformer,
+      manifests,
+      new TemplateParamsService(),
+    );
   }
 
   beforeEach(() => {
@@ -61,14 +80,8 @@ describe('GenerationService', () => {
     transformer = {
       transform: jest.fn().mockImplementation((png: Buffer) => Promise.resolve(png)),
     };
-    service = new GenerationService(
-      badgeCache as unknown as BadgeCache,
-      rendererRegistry as unknown as RendererRegistry,
-      transformer as unknown as ImageTransformer,
-    );
-    createKeySpy = jest
-      .spyOn(CacheKeyFactory, 'create')
-      .mockReturnValue('cache-key');
+    service = makeService();
+    createKeySpy = jest.spyOn(CacheKeyFactory, 'create').mockReturnValue('cache-key');
   });
 
   afterEach(() => {
@@ -82,14 +95,23 @@ describe('GenerationService', () => {
   it('renders, transforms and caches on a cache miss', async () => {
     const result = await service.generate(queryWith());
 
-    expect(result).toBe(PNG);
+    expect(result).toEqual({ image: PNG, format: 'png' });
     expect(CacheKeyFactory.create).toHaveBeenCalledWith(
       '/api/v1/generate',
-      expect.objectContaining({ left: 'Hello', right: 'World', format: 'png', height: '60' }),
+      expect.objectContaining({
+        template: 'hermit-frame',
+        format: 'png',
+        height: '60',
+        left: 'Hello',
+        right: 'World',
+      }),
     );
     expect(badgeCache.get).toHaveBeenCalledWith('cache-key');
     expect(rendererRegistry.get).toHaveBeenCalledWith('png');
-    expect(render).toHaveBeenCalledWith({ left: 'Hello', right: 'World' });
+    expect(render).toHaveBeenCalledWith({
+      template: definition,
+      values: expectedValues(),
+    });
     expect(transformer.transform).toHaveBeenCalledWith(PNG, 'png', 60);
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(badgeCache.set).toHaveBeenCalledWith('cache-key', PNG);
@@ -100,7 +122,7 @@ describe('GenerationService', () => {
 
     const result = await service.generate(queryWith());
 
-    expect(result).toBe(PNG);
+    expect(result.image).toBe(PNG);
     expect(render).not.toHaveBeenCalled();
     expect(transformer.transform).not.toHaveBeenCalled();
     expect(prepare).not.toHaveBeenCalled();
@@ -114,10 +136,22 @@ describe('GenerationService', () => {
     const result = await service.generate(queryWith({ format: 'webp', height: 80 }));
 
     expect(rendererRegistry.get).toHaveBeenCalledWith('png');
-    expect(render).toHaveBeenCalledWith({ left: 'Hello', right: 'World' });
     expect(transformer.transform).toHaveBeenCalledWith(PNG, 'webp', 80);
-    expect(result).toBe(WEBP);
+    expect(result).toEqual({ image: WEBP, format: 'webp' });
     expect(badgeCache.set).toHaveBeenCalledWith('cache-key', WEBP);
+  });
+
+  it('includes colors and template id in the cache key', async () => {
+    await service.generate(queryWith({ borderColor: '#f00', textColor: '#fff' }));
+
+    expect(createKeySpy).toHaveBeenCalledWith(
+      '/api/v1/generate',
+      expect.objectContaining({
+        template: 'hermit-frame',
+        borderColor: 'rgb(255, 0, 0)',
+        textColor: 'rgb(255, 255, 255)',
+      }),
+    );
   });
 
   it('passes distinct format and height values to the cache key factory', async () => {
@@ -137,22 +171,28 @@ describe('GenerationService', () => {
   });
 
   it('uses height 60 when the field is absent from the query', async () => {
-    const query = queryWith();
-    delete (query as Partial<GenerateQueryDto>).height;
-
-    await service.generate(query);
+    await service.generate(queryWith());
 
     expect(transformer.transform).toHaveBeenCalledWith(PNG, 'png', 60);
+  });
+
+  it('rejects an unknown template, an invalid color and an unknown template parameter', async () => {
+    await expect(
+      service.generate(queryWith({ template: 'nope' })),
+    ).rejects.toThrow();
+    await expect(
+      service.generate(queryWith({ borderColor: 'red' })),
+    ).rejects.toThrow();
+    await expect(
+      service.generate(queryWith({ mystery: 'x' })),
+    ).rejects.toThrow();
+    expect(render).not.toHaveBeenCalled();
   });
 
   it('bypasses the response cache when FRESH_TEMPLATE is set', async () => {
     process.env.FRESH_TEMPLATE = '1';
     badgeCache.get.mockResolvedValue(PNG);
-    const freshService = new GenerationService(
-      badgeCache as unknown as BadgeCache,
-      rendererRegistry as unknown as RendererRegistry,
-      transformer as unknown as ImageTransformer,
-    );
+    const freshService = makeService();
 
     await freshService.generate(queryWith());
     await freshService.generate(queryWith({ right: 'There' }));
@@ -160,18 +200,18 @@ describe('GenerationService', () => {
     expect(badgeCache.get).not.toHaveBeenCalled();
     expect(badgeCache.set).not.toHaveBeenCalled();
     expect(prepare).toHaveBeenCalledTimes(2);
-    expect(prepare).toHaveBeenNthCalledWith(1, 'Hello', 'World');
-    expect(prepare).toHaveBeenNthCalledWith(2, 'Hello', 'There');
+    expect(prepare).toHaveBeenNthCalledWith(1, definition, expectedValues());
+    expect(prepare).toHaveBeenNthCalledWith(
+      2,
+      definition,
+      expectedValues({ right: 'There' }),
+    );
   });
 
   it('accepts FRESH_MANIFEST as an alias for FRESH_TEMPLATE', async () => {
     process.env.FRESH_MANIFEST = 'yes';
     badgeCache.get.mockResolvedValue(PNG);
-    const freshService = new GenerationService(
-      badgeCache as unknown as BadgeCache,
-      rendererRegistry as unknown as RendererRegistry,
-      transformer as unknown as ImageTransformer,
-    );
+    const freshService = makeService();
 
     await freshService.generate(queryWith());
 

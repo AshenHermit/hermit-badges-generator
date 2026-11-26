@@ -1,6 +1,9 @@
+import { TemplateDefinition } from '../templates/template-definition';
+import { ResolvedValues } from '../templates/template-params.service';
+
 export interface RenderInput {
-  left: string;
-  right: string;
+  template: TemplateDefinition;
+  values: ResolvedValues;
 }
 
 export interface Renderer {

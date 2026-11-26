@@ -42,7 +42,7 @@ export class BrowserRenderer implements Renderer, OnModuleDestroy {
     const page = await browser.newPage();
     let tempPath: string | undefined;
     try {
-      tempPath = this.templates.prepare(input.left, input.right);
+      tempPath = this.templates.prepare(input.template, input.values);
       await page.goto(pathToFileURL(tempPath).href);
       await page.evaluate(() => document.fonts.ready);
       const fontLoaded = await page.evaluate(() =>

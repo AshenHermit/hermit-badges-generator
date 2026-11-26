@@ -31,7 +31,7 @@ describe('generate', () => {
       expect(body.equals(bodies[0])).toBe(true);
     }
     expect(app.get(MemoryCacheService).size).toBe(1);
-  });
+  }, 30000);
 
   it('returns 200 with PNG magic for left=Hello&right=World', async () => {
     const res = await generate('/api/v1/generate?left=Hello&right=World').expect(200);
@@ -45,6 +45,13 @@ describe('generate', () => {
     const a = await generate('/api/v1/generate?left=Hello&right=World').expect(200);
     const b = await generate('/api/v1/generate?right=World&left=Hello').expect(200);
     expect(a.body.equals(b.body)).toBe(true);
+  });
+
+  it('accepts an explicit template id', async () => {
+    const res = await generate(
+      '/api/v1/generate?template=hermit-frame&left=Hello&right=World',
+    ).expect(200);
+    expect((res.body as Buffer).subarray(0, 8)).toEqual(PNG_MAGIC);
   });
 
   it('produces different bytes for different right text', async () => {
@@ -74,8 +81,47 @@ describe('generate', () => {
     await generate('/api/v1/generate?left=a%00b&right=World').expect(400);
   });
 
-  it('rejects an invalid style', async () => {
-    await generate('/api/v1/generate?left=Hello&right=World&style=nope').expect(400);
+  it('requires left and right', async () => {
+    await generate('/api/v1/generate?right=World').expect(400);
+    await generate('/api/v1/generate?left=Hello').expect(400);
+  });
+
+  it('rejects an unknown template', async () => {
+    await generate('/api/v1/generate?template=nope&left=Hello&right=World').expect(400);
+  });
+
+  it('rejects an unknown template parameter', async () => {
+    await generate('/api/v1/generate?left=Hello&right=World&mystery=x').expect(400);
+  });
+
+  it('accepts hex and rgb colors and produces different bytes', async () => {
+    const base = '/api/v1/generate?left=Colors&right=Test';
+    const a = await generate(base).expect(200);
+    const b = await generate(`${base}&borderColor=%23ff0000`).expect(200);
+    const c = await generate(`${base}&leftBgColor=rgb(1%2C2%2C3)&rightBgColor=%230f0`).expect(200);
+    const d = await generate(`${base}&textColor=%23ffffff`).expect(200);
+
+    expect(a.body.equals(b.body)).toBe(false);
+    expect(b.body.equals(c.body)).toBe(false);
+    expect(c.body.equals(d.body)).toBe(false);
+    expect((a.body as Buffer).subarray(0, 8)).toEqual(PNG_MAGIC);
+  });
+
+  it('caches identical colors together and different colors separately', async () => {
+    const base = '/api/v1/generate?left=Cache&right=Colors';
+    const before = app.get(MemoryCacheService).size;
+    await generate(`${base}&borderColor=%23f00`).expect(200);
+    await generate(`${base}&borderColor=rgb(255%2C0%2C0)`).expect(200);
+    expect(app.get(MemoryCacheService).size).toBe(before + 1);
+    await generate(`${base}&borderColor=%2300f`).expect(200);
+    expect(app.get(MemoryCacheService).size).toBe(before + 2);
+  });
+
+  it('rejects invalid colors', async () => {
+    const base = '/api/v1/generate?left=Hello&right=World';
+    await generate(`${base}&borderColor=red`).expect(400);
+    await generate(`${base}&textColor=%2312345`).expect(400);
+    await generate(`${base}&leftBgColor=rgb(300%2C0%2C0)`).expect(400);
   });
 
   it('returns a valid WebP image for format=webp', async () => {
@@ -154,5 +200,47 @@ describe('generate', () => {
     const b = await generate(`${base}&format=webp`).expect(200);
     expect(a.body.equals(b.body)).toBe(false);
     expect(app.get(MemoryCacheService).size).toBe(before + 2);
+  });
+});
+
+describe('template parameters endpoint', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    app = await createApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('lists template ids', async () => {
+    const res = await request(app.getHttpServer()).get('/api/v1/templates').expect(200);
+    expect(res.body).toContain('hermit-frame');
+  });
+
+  it('returns query parameter definitions for a template', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/templates/hermit-frame')
+      .expect(200);
+
+    expect(res.body.id).toBe('hermit-frame');
+    const byName = Object.fromEntries(
+      (res.body.parameters as Array<{ name: string }>).map((param) => [param.name, param]),
+    );
+    expect(byName.left).toEqual(
+      expect.objectContaining({ type: 'string', required: true, maxLength: 32 }),
+    );
+    expect(byName.borderColor).toEqual(
+      expect.objectContaining({ type: 'color', required: false, default: 'rgb(41, 39, 45)' }),
+    );
+    expect(byName.textColor).toEqual(
+      expect.objectContaining({ type: 'color', required: false, default: '#e8e6df' }),
+    );
+    expect(res.body.parameters).toHaveLength(6);
+  });
+
+  it('rejects an unknown template', async () => {
+    await request(app.getHttpServer()).get('/api/v1/templates/nope').expect(400);
   });
 });

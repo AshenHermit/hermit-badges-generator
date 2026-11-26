@@ -4,7 +4,14 @@ import { CacheKeyFactory } from '../cache/cache-key.factory';
 import { ImageFormat, ImageTransformer } from '../rendering/image-transformer';
 import { RendererRegistry } from '../rendering/renderer.registry';
 import { isFreshTemplate } from '../rendering/template.service';
-import { DEFAULT_HEIGHT, GenerateQueryDto } from './dto/generate-query.dto';
+import { TemplateManifestService } from '../templates/template-manifest.service';
+import { TemplateParamsService } from '../templates/template-params.service';
+import { GenerateParams, parseGenerateParams } from './query-parser';
+
+export interface GeneratedImage {
+  image: Buffer;
+  format: ImageFormat;
+}
 
 @Injectable()
 export class GenerationService {
@@ -16,38 +23,41 @@ export class GenerationService {
     @Inject(BADGE_CACHE) private readonly badgeCache: BadgeCache,
     private readonly rendererRegistry: RendererRegistry,
     private readonly imageTransformer: ImageTransformer,
+    private readonly manifests: TemplateManifestService,
+    private readonly params: TemplateParamsService,
   ) {
     this.fresh = isFreshTemplate();
   }
 
-  async generate(query: GenerateQueryDto): Promise<Buffer> {
+  async generate(rawQuery: Record<string, unknown>): Promise<GeneratedImage> {
+    const query = this.parse(rawQuery);
     const key = CacheKeyFactory.create(GenerationService.ENDPOINT, {
-      left: query.left,
-      right: query.right,
-      style: query.style,
+      template: query.templateId,
       format: query.format,
-      height: String(query.height ?? DEFAULT_HEIGHT),
+      height: String(query.height),
+      ...query.variables,
     });
 
     if (!this.fresh) {
       const cached = await this.badgeCache.get(key);
       if (cached) {
-        return cached;
+        return { image: cached, format: query.format };
       }
     }
 
+    const definition = this.manifests.get(query.templateId);
     const png = await this.rendererRegistry.get('png').render({
-      left: query.left,
-      right: query.right,
+      template: definition,
+      values: query.variables,
     });
-    const image = await this.imageTransformer.transform(
-      png,
-      query.format as ImageFormat,
-      query.height ?? DEFAULT_HEIGHT,
-    );
+    const image = await this.imageTransformer.transform(png, query.format, query.height);
     if (!this.fresh) {
       await this.badgeCache.set(key, image);
     }
-    return image;
+    return { image, format: query.format };
+  }
+
+  parse(rawQuery: Record<string, unknown>): GenerateParams {
+    return parseGenerateParams(rawQuery, this.manifests, this.params);
   }
 }

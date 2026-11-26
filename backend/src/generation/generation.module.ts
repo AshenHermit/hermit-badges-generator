@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { CacheModule } from '../cache/cache.module';
 import { RenderingModule } from '../rendering/rendering.module';
+import { TemplatesModule } from '../templates/templates.module';
 import { GenerationController } from './generation.controller';
 import { GenerationService } from './generation.service';
 
 @Module({
-  imports: [RenderingModule, CacheModule],
+  imports: [RenderingModule, CacheModule, TemplatesModule],
   controllers: [GenerationController],
   providers: [GenerationService],
   exports: [GenerationService],
