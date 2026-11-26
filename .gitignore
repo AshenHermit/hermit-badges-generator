@@ -1,6 +1,9 @@
-node_modules/
-dist/
-coverage/
+**/node_modules/
+**/dist/
+**/coverage/
+**/.env
 *.log
+.nx/
 .worktrees/
 .superpowers/sdd/
+backend/assets/templates/hermit-frame/template-*.html

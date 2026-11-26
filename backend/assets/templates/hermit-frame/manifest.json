@@ -1,0 +1,56 @@
+{
+  "id": "hermit-frame",
+  "template": "template.html",
+  "variables": [
+    {
+      "name": "left",
+      "placeholder": "LEFT",
+      "type": "string",
+      "required": true,
+      "maxLength": 32,
+      "pattern": "^[^\\p{Cc}\\p{Cf}]+$",
+      "description": "Text for the left half"
+    },
+    {
+      "name": "right",
+      "placeholder": "RIGHT",
+      "type": "string",
+      "required": true,
+      "maxLength": 32,
+      "pattern": "^[^\\p{Cc}\\p{Cf}]+$",
+      "description": "Text for the right half"
+    },
+    {
+      "name": "borderColor",
+      "placeholder": "BORDER_COLOR",
+      "type": "color",
+      "required": false,
+      "default": "rgb(41, 39, 45)",
+      "description": "Frame outline color"
+    },
+    {
+      "name": "leftBgColor",
+      "placeholder": "LEFT_BG_COLOR",
+      "type": "color",
+      "required": false,
+      "default": "rgb(53, 52, 62)",
+      "description": "Left half background color"
+    },
+    {
+      "name": "rightBgColor",
+      "placeholder": "RIGHT_BG_COLOR",
+      "type": "color",
+      "required": false,
+      "default": "rgb(140, 48, 101)",
+      "description": "Right half background color"
+    },
+    {
+      "name": "textColor",
+      "placeholder": "TEXT_COLOR",
+      "type": "color",
+      "required": false,
+      "default": "#e8e6df",
+      "description": "Badge text color"
+    }
+  ]
+}

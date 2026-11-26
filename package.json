@@ -1,0 +1,16 @@
+{
+  "name": "hermit-badges-generator",
+  "private": true,
+  "packageManager": "pnpm@10.12.1",
+  "scripts": {
+    "backend:dev": "pnpm nx run backend:dev",
+    "backend:build": "pnpm nx run backend:build",
+    "backend:test": "pnpm nx run backend:test",
+    "backend:test:e2e": "pnpm nx run backend:test:e2e",
+    "backend:serve": "pnpm nx run backend:serve"
+  },
+  "devDependencies": {
+    "nx": "24.0.7",
+    "typescript": "5.9.3"
+  }
+}
