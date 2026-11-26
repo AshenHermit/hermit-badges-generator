@@ -3,10 +3,12 @@
 }
 
 http://{SERVICE_SUBDOMAIN}.{COMMON_DOMAIN}:80 {
-	handle /api/* {
+	handle {
 		reverse_proxy {BACKEND_HOST}:{BACKEND_PORT}
 	}
+}
 
+http://{FRONTEND_SUBDOMAIN}.{COMMON_DOMAIN}:80 {
 	handle {
 		reverse_proxy {FRONTEND_HOST}:{FRONTEND_PORT}
 	}
