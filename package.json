@@ -11,7 +11,8 @@
     "frontend:dev": "pnpm nx run frontend:dev",
     "frontend:build": "pnpm nx run frontend:build",
     "frontend:serve": "pnpm nx run frontend:serve",
-    "frontend:test": "pnpm nx run frontend:test"
+    "frontend:test": "pnpm nx run frontend:test",
+    "frontend:check-types": "pnpm nx run frontend:check-types"
   },
   "devDependencies": {
     "nx": "24.0.7",

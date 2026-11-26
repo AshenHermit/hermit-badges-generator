@@ -64,6 +64,16 @@ Interactive API docs: [http://localhost:3000/api/docs](http://localhost:3000/api
 > [!TIP]
 > To run compiled output instead of dev mode: `pnpm backend:build && pnpm backend:serve`. All root scripts are Nx targets; see [`backend/project.json`](backend/project.json).
 
+### Frontend
+
+The single-page frontend lives in [`frontend/`](frontend/) and runs on port `3001`:
+
+```bash
+pnpm frontend:dev
+```
+
+It discovers templates and their parameters through the backend API. Browser metadata requests use relative `/api/v1/...` paths; Next.js rewrites proxy them to `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:3000`, see [`frontend/.env.local.example`](frontend/.env.local.example)). Set that variable to target another backend, e.g. the production API. The backend has no CORS headers, so keep using the proxy for metadata.
+
 ## API
 
 ### `GET /api/v1/generate`
