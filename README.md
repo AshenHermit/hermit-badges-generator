@@ -1,10 +1,10 @@
 # badge-generator
 
-NestJS service that renders frame-based badges to PNG. `assets/templates/hermit-frame/template.html` is the editable source of truth: HTML/CSS places the left and right text into a native CSS `border-image` frame. Rendering uses headless Chromium through `playwright-core`, which loads the template locally via `file://` and screenshots the badge element. No network fetch is performed.
+NestJS service that renders frame-based badges to PNG or WebP. `assets/templates/hermit-frame/template.html` is the editable source of truth: HTML/CSS places the left and right text into a native CSS `border-image` frame. Rendering uses headless Chromium through `playwright-core`, which loads the template locally via `file://` and screenshots the badge element. `sharp` then resizes that native-size screenshot to the requested height and encodes PNG or WebP. No network fetch is performed.
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 20.9.0+ (required by the pinned `sharp@0.35.5`)
 - npm
 - Playwright Chromium installed locally (`playwright-core@1.65.1` resolves it at runtime via `chromium.executablePath()`; the path is not hardcoded)
 
@@ -79,9 +79,10 @@ curl -o badge.png 'http://localhost:3000/api/v1/generate?left=Hello&right=World'
 | `left`    | yes      | —              | 1–32 printable characters      |
 | `right`   | yes      | —              | 1–32 printable characters      |
 | `style`   | no       | `hermit-frame` | Only `hermit-frame` in MVP     |
-| `format`  | no       | `png`          | Only `png` in MVP              |
+| `format`  | no       | `png`          | `png` or `webp`                |
+| `height`  | no       | `60`           | Integer 1–1000, output pixels  |
 
-Response: `200` with `Content-Type: image/png` and `Cache-Control: public, max-age=3600`. Invalid parameters return `400`. Identical requests are byte-identical and served from an in-memory SHA-256 keyed cache (1 hour TTL, 1000 entries), unless `CACHE_DISABLED=true` or `FRESH_TEMPLATE=true` (or its alias `FRESH_MANIFEST=true`) is set.
+Both formats are resized by `height` from the native-size render, preserving aspect ratio. Response: `200` with `Content-Type: image/png` or `image/webp` (per `format`) and `Cache-Control: public, max-age=3600`. Invalid parameters return `400`. Identical requests are byte-identical and served from an in-memory SHA-256 keyed cache (1 hour TTL, 1000 entries), unless `CACHE_DISABLED=true` or `FRESH_TEMPLATE=true` (or its alias `FRESH_MANIFEST=true`) is set.
 
 ## Swagger
 
@@ -96,8 +97,16 @@ npm test -- --runInBand
 npm run test:e2e
 ```
 
+Run e2e with `CACHE_DISABLED=false` and `FRESH_MANIFEST=false` in the environment so the cache-separation assertions are exercised.
+
 Use `--runInBand` for the full unit suite: `template.service.spec.ts` temporarily rewrites `template.html` and restores the original bytes in `finally`.
 
-## Future work
+Golden PNG regeneration: download with no `height` (the default 60px resize applies); explicit `&height=60` yields identical bytes. Provenance is recorded in `test/golden/README.md`.
 
-`sharp` is planned for additional output formats (for example WebP and JPEG). It is not installed or used in this MVP; only PNG is supported.
+```powershell
+npm run build
+npm run start
+Invoke-WebRequest -Uri 'http://localhost:3000/api/v1/generate?left=Hello&right=World' -OutFile test/golden/hermit-frame.png -UseBasicParsing
+```
+
+Stop the app after the download, then rerun `npm test -- --runInBand`.
