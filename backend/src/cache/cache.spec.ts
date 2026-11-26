@@ -1,4 +1,7 @@
+import { Test } from '@nestjs/testing';
+import { BADGE_CACHE } from './badge-cache';
 import { CacheKeyFactory } from './cache-key.factory';
+import { CacheModule } from './cache.module';
 import { MemoryCacheService } from './memory-cache.service';
 
 describe('CacheKeyFactory', () => {
@@ -30,43 +33,43 @@ describe('MemoryCacheService', () => {
     jest.useRealTimers();
   });
 
-  it('set/get returns the same Buffer', () => {
+  it('set/get returns the same Buffer', async () => {
     const svc = new MemoryCacheService(1000, 10);
     const buf = Buffer.from('hello');
-    svc.set('k', buf);
-    expect(svc.get('k')).toBe(buf);
+    await svc.set('k', buf);
+    expect(await svc.get('k')).toBe(buf);
   });
 
-  it('expires entries after ttlMs', () => {
+  it('expires entries after ttlMs', async () => {
     jest.useFakeTimers();
     const svc = new MemoryCacheService(1000, 10);
-    svc.set('k', Buffer.from('v'));
-    expect(svc.get('k')).toBeDefined();
+    await svc.set('k', Buffer.from('v'));
+    expect(await svc.get('k')).toBeDefined();
     jest.advanceTimersByTime(1001);
-    expect(svc.get('k')).toBeUndefined();
+    expect(await svc.get('k')).toBeUndefined();
   });
 
-  it('evicts the least-recently-used entry beyond maxEntries', () => {
+  it('evicts the least-recently-used entry beyond maxEntries', async () => {
     const svc = new MemoryCacheService(1000, 2);
-    svc.set('a', Buffer.from('a'));
-    svc.set('b', Buffer.from('b'));
+    await svc.set('a', Buffer.from('a'));
+    await svc.set('b', Buffer.from('b'));
     expect(svc.size).toBe(2);
-    svc.get('a'); // refresh a, making b the LRU
-    svc.set('c', Buffer.from('c'));
+    await svc.get('a'); // refresh a, making b the LRU
+    await svc.set('c', Buffer.from('c'));
     expect(svc.size).toBe(2);
-    expect(svc.get('a')).toBeDefined();
-    expect(svc.get('b')).toBeUndefined();
-    expect(svc.get('c')).toBeDefined();
+    expect(await svc.get('a')).toBeDefined();
+    expect(await svc.get('b')).toBeUndefined();
+    expect(await svc.get('c')).toBeDefined();
   });
 
-  it('does not store entries when CACHE_DISABLED is true', () => {
+  it('does not store entries when CACHE_DISABLED is true', async () => {
     const previous = process.env.CACHE_DISABLED;
     process.env.CACHE_DISABLED = 'true';
     try {
       const svc = new MemoryCacheService(1000, 10);
-      svc.set('k', Buffer.from('v'));
+      await svc.set('k', Buffer.from('v'));
       expect(svc.size).toBe(0);
-      expect(svc.get('k')).toBeUndefined();
+      expect(await svc.get('k')).toBeUndefined();
     } finally {
       if (previous === undefined) {
         delete process.env.CACHE_DISABLED;
@@ -74,5 +77,18 @@ describe('MemoryCacheService', () => {
         process.env.CACHE_DISABLED = previous;
       }
     }
+  });
+});
+
+describe('CacheModule', () => {
+  it('exposes the BADGE_CACHE token from CacheModule', async () => {
+    const { BADGE_CACHE } = await import('./badge-cache');
+    expect(typeof BADGE_CACHE).toBe('symbol');
+  });
+
+  it('resolves to a MemoryCacheService when CACHE_DRIVER is not redis', async () => {
+    delete process.env.CACHE_DRIVER;
+    const moduleRef = await Test.createTestingModule({ imports: [CacheModule] }).compile();
+    expect(moduleRef.get(BADGE_CACHE)).toBeInstanceOf(MemoryCacheService);
   });
 });

@@ -1,0 +1,7 @@
+{
+	auto_https off
+}
+
+http://{SERVICE_SUBDOMAIN}.{COMMON_DOMAIN}:80 {
+	reverse_proxy {BACKEND_HOST}:{BACKEND_PORT}
+}

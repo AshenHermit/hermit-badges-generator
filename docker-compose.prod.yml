@@ -1,0 +1,77 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    environment:
+      # The healthcheck needs the password inside the container; $$ defers
+      # expansion to the container shell instead of the Compose host shell.
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - badge-generator
+    restart: unless-stopped
+
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/ashenhermit/hermit-badges-generator/backend:latest}
+    container_name: hermit-badges-backend
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      CACHE_DRIVER: redis
+      CACHE_TTL_MS: "3600000"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: "0"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - badge-generator
+    restart: unless-stopped
+
+  caddy:
+    image: ${CADDY_IMAGE:-ghcr.io/ashenhermit/hermit-badges-generator/caddy:latest}
+    container_name: hermit-badges-caddy
+    ports:
+      - "${CADDY_PORT:-8080}:80"
+    environment:
+      COMMON_DOMAIN: ${COMMON_DOMAIN}
+      SERVICE_SUBDOMAIN: ${SERVICE_SUBDOMAIN:-badges}
+      BACKEND_HOST: backend
+      BACKEND_PORT: "3000"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - badge-generator
+      - shared-net
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  caddy_data:
+  caddy_config:
+  caddy_logs:
+
+networks:
+  badge-generator:
+    name: badge-generator
+    driver: bridge
+  shared-net:
+    external: true
