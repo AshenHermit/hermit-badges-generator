@@ -8,7 +8,7 @@
 **HTTP service that renders frame-based badges to PNG or WebP.**
 
 [![Deploy](https://img.shields.io/github/actions/workflow/status/AshenHermit/hermit-badges-generator/deploy.yml?style=flat-square&label=deploy)](https://github.com/AshenHermit/hermit-badges-generator/actions/workflows/deploy.yml)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.9-3c873a?style=flat-square)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.22-3c873a?style=flat-square)](https://nodejs.org)
 [![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?style=flat-square&logo=nestjs)](https://nestjs.com)
 [![pnpm](https://img.shields.io/badge/pnpm-10.12.1-F9AD00?style=flat-square&logo=pnpm)](https://pnpm.io)
 
@@ -41,7 +41,7 @@ Monorepo for the Hermit badges generator. The [`backend/`](backend/README.md) pa
 
 Prerequisites:
 
-- Node.js 20.9.0 or newer (required by the pinned `sharp@0.35.5`)
+- Node.js 22.22.2 or newer (frontend test tooling: `jsdom@31` / `undici@8`; backend's pinned `sharp@0.35.5` only needs 20.9.0)
 - pnpm 10.12.1 (enable with `corepack enable`)
 - Playwright Chromium: `pnpm --dir backend exec playwright-core install chromium` (the executable path is resolved at runtime, not hardcoded)
 
