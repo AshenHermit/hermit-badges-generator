@@ -2,9 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { BadgeCache } from '../cache/badge-cache';
 import { CacheKeyFactory } from '../cache/cache-key.factory';
 import { MemoryCacheService } from '../cache/memory-cache.service';
+import { ImageFormat, ImageTransformer } from '../rendering/image-transformer';
 import { RendererRegistry } from '../rendering/renderer.registry';
 import { isFreshTemplate } from '../rendering/template.service';
-import { GenerateQueryDto } from './dto/generate-query.dto';
+import { DEFAULT_HEIGHT, GenerateQueryDto } from './dto/generate-query.dto';
 
 @Injectable()
 export class GenerationService {
@@ -15,6 +16,7 @@ export class GenerationService {
   constructor(
     @Inject(MemoryCacheService) private readonly badgeCache: BadgeCache,
     private readonly rendererRegistry: RendererRegistry,
+    private readonly imageTransformer: ImageTransformer,
   ) {
     this.fresh = isFreshTemplate();
   }
@@ -25,6 +27,7 @@ export class GenerationService {
       right: query.right,
       style: query.style,
       format: query.format,
+      height: String(query.height ?? DEFAULT_HEIGHT),
     });
 
     if (!this.fresh) {
@@ -34,13 +37,18 @@ export class GenerationService {
       }
     }
 
-    const png = await this.rendererRegistry.get(query.format).render({
+    const png = await this.rendererRegistry.get('png').render({
       left: query.left,
       right: query.right,
     });
+    const image = await this.imageTransformer.transform(
+      png,
+      query.format as ImageFormat,
+      query.height ?? DEFAULT_HEIGHT,
+    );
     if (!this.fresh) {
-      this.badgeCache.set(key, png);
+      this.badgeCache.set(key, image);
     }
-    return png;
+    return image;
   }
 }

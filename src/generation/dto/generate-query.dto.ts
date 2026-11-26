@@ -1,4 +1,7 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+
+export const DEFAULT_HEIGHT = 60;
 
 export class GenerateQueryDto {
   @IsString()
@@ -18,6 +21,13 @@ export class GenerateQueryDto {
   style: string = 'hermit-frame';
 
   @IsOptional()
-  @IsIn(['png'])
+  @IsIn(['png', 'webp'])
   format: string = 'png';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  height: number = DEFAULT_HEIGHT;
 }

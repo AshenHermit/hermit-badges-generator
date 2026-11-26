@@ -1,9 +1,10 @@
 import { BadgeCache } from '../cache/badge-cache';
 import { CacheKeyFactory } from '../cache/cache-key.factory';
 import { BrowserLike, BrowserRenderer, PageLike } from '../rendering/browser-renderer';
+import { ImageTransformer } from '../rendering/image-transformer';
 import { RendererRegistry } from '../rendering/renderer.registry';
 import { TemplateService } from '../rendering/template.service';
-import { GenerateQueryDto } from './dto/generate-query.dto';
+import { DEFAULT_HEIGHT, GenerateQueryDto } from './dto/generate-query.dto';
 import { GenerationService } from './generation.service';
 
 describe('GenerationService', () => {
@@ -14,6 +15,7 @@ describe('GenerationService', () => {
 
   let badgeCache: { get: jest.Mock; set: jest.Mock };
   let rendererRegistry: { get: jest.Mock };
+  let transformer: { transform: jest.Mock };
   let renderer: BrowserRenderer;
   let render: jest.SpyInstance;
   let templateService: TemplateService;
@@ -27,6 +29,7 @@ describe('GenerationService', () => {
     query.right = overrides?.right ?? 'World';
     query.style = overrides?.style ?? 'hermit-frame';
     query.format = overrides?.format ?? 'png';
+    query.height = overrides?.height ?? DEFAULT_HEIGHT;
     return query;
   }
 
@@ -52,9 +55,13 @@ describe('GenerationService', () => {
     renderer = new BrowserRenderer(templateService, fakeBrowser());
     render = jest.spyOn(renderer, 'render');
     rendererRegistry = { get: jest.fn().mockReturnValue(renderer) };
+    transformer = {
+      transform: jest.fn().mockImplementation((png: Buffer) => Promise.resolve(png)),
+    };
     service = new GenerationService(
       badgeCache as unknown as BadgeCache,
       rendererRegistry as unknown as RendererRegistry,
+      transformer as unknown as ImageTransformer,
     );
     createKeySpy = jest
       .spyOn(CacheKeyFactory, 'create')
@@ -69,30 +76,70 @@ describe('GenerationService', () => {
     else process.env.FRESH_MANIFEST = originalFreshManifest;
   });
 
-  it('renders and caches on a cache miss', async () => {
+  it('renders, transforms and caches on a cache miss', async () => {
     const result = await service.generate(queryWith());
 
     expect(result).toBe(PNG);
     expect(CacheKeyFactory.create).toHaveBeenCalledWith(
       '/api/v1/generate',
-      expect.objectContaining({ left: 'Hello', right: 'World' }),
+      expect.objectContaining({ left: 'Hello', right: 'World', format: 'png', height: '60' }),
     );
     expect(badgeCache.get).toHaveBeenCalledWith('cache-key');
     expect(rendererRegistry.get).toHaveBeenCalledWith('png');
     expect(render).toHaveBeenCalledWith({ left: 'Hello', right: 'World' });
+    expect(transformer.transform).toHaveBeenCalledWith(PNG, 'png', 60);
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(badgeCache.set).toHaveBeenCalledWith('cache-key', PNG);
   });
 
-  it('returns the cached buffer without rendering on a hit', async () => {
+  it('returns the cached buffer without rendering or transforming on a hit', async () => {
     badgeCache.get.mockReturnValue(PNG);
 
     const result = await service.generate(queryWith());
 
     expect(result).toBe(PNG);
     expect(render).not.toHaveBeenCalled();
+    expect(transformer.transform).not.toHaveBeenCalled();
     expect(prepare).not.toHaveBeenCalled();
     expect(badgeCache.set).not.toHaveBeenCalled();
+  });
+
+  it('renders PNG, transforms to WebP and caches the transformed bytes', async () => {
+    const WEBP = Buffer.from([0x52, 0x49, 0x46, 0x46]);
+    transformer.transform.mockResolvedValue(WEBP);
+
+    const result = await service.generate(queryWith({ format: 'webp', height: 80 }));
+
+    expect(rendererRegistry.get).toHaveBeenCalledWith('png');
+    expect(render).toHaveBeenCalledWith({ left: 'Hello', right: 'World' });
+    expect(transformer.transform).toHaveBeenCalledWith(PNG, 'webp', 80);
+    expect(result).toBe(WEBP);
+    expect(badgeCache.set).toHaveBeenCalledWith('cache-key', WEBP);
+  });
+
+  it('passes distinct format and height values to the cache key factory', async () => {
+    await service.generate(queryWith());
+    await service.generate(queryWith({ format: 'webp', height: 80 }));
+
+    expect(createKeySpy).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1/generate',
+      expect.objectContaining({ format: 'png', height: '60' }),
+    );
+    expect(createKeySpy).toHaveBeenNthCalledWith(
+      2,
+      '/api/v1/generate',
+      expect.objectContaining({ format: 'webp', height: '80' }),
+    );
+  });
+
+  it('uses height 60 when the field is absent from the query', async () => {
+    const query = queryWith();
+    delete (query as Partial<GenerateQueryDto>).height;
+
+    await service.generate(query);
+
+    expect(transformer.transform).toHaveBeenCalledWith(PNG, 'png', 60);
   });
 
   it('bypasses the response cache when FRESH_TEMPLATE is set', async () => {
@@ -101,6 +148,7 @@ describe('GenerationService', () => {
     const freshService = new GenerationService(
       badgeCache as unknown as BadgeCache,
       rendererRegistry as unknown as RendererRegistry,
+      transformer as unknown as ImageTransformer,
     );
 
     await freshService.generate(queryWith());
@@ -119,6 +167,7 @@ describe('GenerationService', () => {
     const freshService = new GenerationService(
       badgeCache as unknown as BadgeCache,
       rendererRegistry as unknown as RendererRegistry,
+      transformer as unknown as ImageTransformer,
     );
 
     await freshService.generate(queryWith());
