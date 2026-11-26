@@ -20,7 +20,9 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Golden PNG was generated on Windows with Node 24.11 and chromium-1255
+    # (backend/test/golden/README.md); byte-for-byte comparison holds only there.
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,12 +30,12 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24.11.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # playwright-core does not download browsers on install; render/golden
-      # tests launch Chromium directly and fail on a bare GitHub runner.
-      - run: pnpm --filter badge-generator-backend exec playwright-core install --with-deps chromium
+      # tests launch Chromium directly and fail on a bare runner.
+      - run: pnpm --filter badge-generator-backend exec playwright-core install chromium
       - run: pnpm nx run backend:test
       - run: pnpm nx run backend:build
 
