@@ -1,12 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import sharp from 'sharp';
+import { Injectable } from "@nestjs/common";
+import sharp from "sharp";
 
-export type ImageFormat = 'png' | 'webp';
+export type ImageFormat = "png" | "webp";
 
 @Injectable()
 export class ImageTransformer {
-  async transform(png: Buffer, format: ImageFormat, height: number): Promise<Buffer> {
+  async transform(
+    png: Buffer,
+    format: ImageFormat,
+    height: number,
+  ): Promise<Buffer> {
     const resized = sharp(png).resize({ height });
-    return format === 'webp' ? resized.webp().toBuffer() : resized.png().toBuffer();
+    return format === "webp"
+      ? resized.webp({ quality: 90 }).toBuffer()
+      : resized.png().toBuffer();
   }
 }
