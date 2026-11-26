@@ -1,7 +1,10 @@
 **/node_modules/
 **/dist/
+**/.next/
+**/*.tsbuildinfo
 **/coverage/
 **/.env
+.env.prod
 *.log
 .nx/
 .worktrees/
