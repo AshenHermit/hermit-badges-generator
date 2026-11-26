@@ -25,7 +25,7 @@ export class MemoryCacheService implements BadgeCache {
     return this.entries.size;
   }
 
-  set(key: string, value: Buffer): void {
+  async set(key: string, value: Buffer): Promise<void> {
     if (this.disabled) {
       return;
     }
@@ -40,7 +40,7 @@ export class MemoryCacheService implements BadgeCache {
     this.entries.set(key, { value, expiresAt: Date.now() + this.ttlMs });
   }
 
-  get(key: string): Buffer | undefined {
+  async get(key: string): Promise<Buffer | undefined> {
     if (this.disabled) {
       return undefined;
     }

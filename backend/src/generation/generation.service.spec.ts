@@ -49,7 +49,10 @@ describe('GenerationService', () => {
   beforeEach(() => {
     delete process.env.FRESH_TEMPLATE;
     delete process.env.FRESH_MANIFEST;
-    badgeCache = { get: jest.fn().mockReturnValue(undefined), set: jest.fn() };
+    badgeCache = {
+      get: jest.fn().mockResolvedValue(undefined),
+      set: jest.fn().mockResolvedValue(undefined),
+    };
     templateService = new TemplateService();
     prepare = jest.spyOn(templateService, 'prepare').mockReturnValue(TEMP_HTML);
     renderer = new BrowserRenderer(templateService, fakeBrowser());
@@ -93,7 +96,7 @@ describe('GenerationService', () => {
   });
 
   it('returns the cached buffer without rendering or transforming on a hit', async () => {
-    badgeCache.get.mockReturnValue(PNG);
+    badgeCache.get.mockResolvedValue(PNG);
 
     const result = await service.generate(queryWith());
 
@@ -144,7 +147,7 @@ describe('GenerationService', () => {
 
   it('bypasses the response cache when FRESH_TEMPLATE is set', async () => {
     process.env.FRESH_TEMPLATE = '1';
-    badgeCache.get.mockReturnValue(PNG);
+    badgeCache.get.mockResolvedValue(PNG);
     const freshService = new GenerationService(
       badgeCache as unknown as BadgeCache,
       rendererRegistry as unknown as RendererRegistry,
@@ -163,7 +166,7 @@ describe('GenerationService', () => {
 
   it('accepts FRESH_MANIFEST as an alias for FRESH_TEMPLATE', async () => {
     process.env.FRESH_MANIFEST = 'yes';
-    badgeCache.get.mockReturnValue(PNG);
+    badgeCache.get.mockResolvedValue(PNG);
     const freshService = new GenerationService(
       badgeCache as unknown as BadgeCache,
       rendererRegistry as unknown as RendererRegistry,

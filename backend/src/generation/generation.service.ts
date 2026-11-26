@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { BadgeCache } from '../cache/badge-cache';
+import { BADGE_CACHE, BadgeCache } from '../cache/badge-cache';
 import { CacheKeyFactory } from '../cache/cache-key.factory';
-import { MemoryCacheService } from '../cache/memory-cache.service';
 import { ImageFormat, ImageTransformer } from '../rendering/image-transformer';
 import { RendererRegistry } from '../rendering/renderer.registry';
 import { isFreshTemplate } from '../rendering/template.service';
@@ -14,7 +13,7 @@ export class GenerationService {
   private readonly fresh: boolean;
 
   constructor(
-    @Inject(MemoryCacheService) private readonly badgeCache: BadgeCache,
+    @Inject(BADGE_CACHE) private readonly badgeCache: BadgeCache,
     private readonly rendererRegistry: RendererRegistry,
     private readonly imageTransformer: ImageTransformer,
   ) {
@@ -31,7 +30,7 @@ export class GenerationService {
     });
 
     if (!this.fresh) {
-      const cached = this.badgeCache.get(key);
+      const cached = await this.badgeCache.get(key);
       if (cached) {
         return cached;
       }
@@ -47,7 +46,7 @@ export class GenerationService {
       query.height ?? DEFAULT_HEIGHT,
     );
     if (!this.fresh) {
-      this.badgeCache.set(key, image);
+      await this.badgeCache.set(key, image);
     }
     return image;
   }
