@@ -7,7 +7,11 @@
     "backend:build": "pnpm nx run backend:build",
     "backend:test": "pnpm nx run backend:test",
     "backend:test:e2e": "pnpm nx run backend:test:e2e",
-    "backend:serve": "pnpm nx run backend:serve"
+    "backend:serve": "pnpm nx run backend:serve",
+    "frontend:dev": "pnpm nx run frontend:dev",
+    "frontend:build": "pnpm nx run frontend:build",
+    "frontend:serve": "pnpm nx run frontend:serve",
+    "frontend:test": "pnpm nx run frontend:test"
   },
   "devDependencies": {
     "nx": "24.0.7",
