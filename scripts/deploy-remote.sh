@@ -122,6 +122,17 @@ docker_login() {
     || die "GHCR login failed" 2
 }
 
+ensure_network() {
+  if [ "$DRY_RUN" != "1" ] && docker network inspect shared-net >/dev/null 2>&1; then
+    log "network shared-net already exists"
+    return 0
+  fi
+  if [ "$DRY_RUN" = "1" ]; then
+    log "dry-run: docker network inspect shared-net"
+  fi
+  run docker network create shared-net
+}
+
 compose() {
   run docker compose \
     --project-directory "$DEPLOY_PATH" \
@@ -134,6 +145,7 @@ main() {
   log "deploying $REF to $DEPLOY_PATH (dry-run=$DRY_RUN)"
   preflight
   docker_login
+  ensure_network
   compose pull
   compose up -d --force-recreate --wait
   run docker image prune -f
