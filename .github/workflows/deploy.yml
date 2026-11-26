@@ -31,6 +31,9 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # playwright-core does not download browsers on install; render/golden
+      # tests launch Chromium directly and fail on a bare GitHub runner.
+      - run: pnpm --filter badge-generator-backend exec playwright-core install --with-deps chromium
       - run: pnpm nx run backend:test
       - run: pnpm nx run backend:build
 
