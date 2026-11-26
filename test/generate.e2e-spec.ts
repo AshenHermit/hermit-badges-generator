@@ -81,6 +81,7 @@ describe('generate', () => {
   it('returns a valid WebP image for format=webp', async () => {
     const res = await generate('/api/v1/generate?left=Hello&right=World&format=webp').expect(200);
     expect(res.headers['content-type']).toContain('image/webp');
+    expect(res.headers['cache-control']).toBe('public, max-age=3600');
     expect(Buffer.isBuffer(res.body)).toBe(true);
     const body = res.body as Buffer;
     expect(body.subarray(0, 4)).toEqual(WEBP_RIFF);
@@ -92,6 +93,14 @@ describe('generate', () => {
     const metadata = await sharp(res.body as Buffer).metadata();
     expect(metadata.format).toBe('webp');
     expect(metadata.height).toBe(60);
+  });
+
+  it('resizes WebP to height=80 with RIFF/WEBP magic', async () => {
+    const res = await generate('/api/v1/generate?left=Hello&right=World&format=webp&height=80').expect(200);
+    const body = res.body as Buffer;
+    expect(body.subarray(0, 4)).toEqual(WEBP_RIFF);
+    expect(body.subarray(8, 12)).toEqual(WEBP_MAGIC);
+    expect((await sharp(body).metadata()).height).toBe(80);
   });
 
   it('rejects an invalid format', async () => {
@@ -134,6 +143,15 @@ describe('generate', () => {
     const base = '/api/v1/generate?left=Cache&right=Height';
     const a = await generate(`${base}&height=60`).expect(200);
     const b = await generate(`${base}&height=80`).expect(200);
+    expect(a.body.equals(b.body)).toBe(false);
+    expect(app.get(MemoryCacheService).size).toBe(before + 2);
+  });
+
+  it('caches identical text in different formats separately', async () => {
+    const before = app.get(MemoryCacheService).size;
+    const base = '/api/v1/generate?left=Cache&right=Format&height=60';
+    const a = await generate(`${base}&format=png`).expect(200);
+    const b = await generate(`${base}&format=webp`).expect(200);
     expect(a.body.equals(b.body)).toBe(false);
     expect(app.get(MemoryCacheService).size).toBe(before + 2);
   });

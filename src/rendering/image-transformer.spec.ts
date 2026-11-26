@@ -38,9 +38,11 @@ describe('ImageTransformer', () => {
 
   it('emits a RIFF/WEBP container for webp output', async () => {
     const output = await transformer.transform(source, 'webp', 60);
+    const metadata = await sharp(output).metadata();
 
     expect(output.subarray(0, 4).toString('ascii')).toBe('RIFF');
     expect(output.subarray(8, 12).toString('ascii')).toBe('WEBP');
+    expect(metadata.hasAlpha).toBe(true);
   });
 
   it('produces byte-identical output for identical requests', async () => {

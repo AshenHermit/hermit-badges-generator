@@ -23,8 +23,9 @@ describe('golden PNG', () => {
     await moduleRef.close();
   });
 
-  // The committed golden PNG is current for the CSS renderer: regenerated from
-  // this build with left=Hello&right=World and verified byte for byte here.
+  // The committed golden PNG is current for the CSS render plus the sharp resize
+  // to the default 60px: regenerated from this build with left=Hello&right=World
+  // and verified byte for byte here.
   it('matches the committed hermit-frame PNG byte for byte', async () => {
     const query = new GenerateQueryDto();
     query.left = 'Hello';
