@@ -3,7 +3,8 @@
 `hermit-frame.png` is compared byte-for-byte by `src/generation/golden.spec.ts`.
 Regenerate it only from the toolchain below; a different OS, Node version,
 `playwright-core` release, or Chromium build can change PNG bytes even when the
-rendered picture is identical.
+rendered picture is identical. CI sets `SKIP_GOLDEN=1` and excludes this test;
+regenerate and verify it locally with the toolchain below.
 
 - Generated: 2026-11-26 (inline-SVG frame, manifest-driven colors)
 - OS: Windows 11 Pro (25H2), build 10.0.26200, 64-bit (win32 x64)
