@@ -38,6 +38,8 @@ jobs:
         env:
           SKIP_GOLDEN: '1'
       - run: pnpm nx run backend:build
+      - run: pnpm nx run frontend:check-types
+      - run: pnpm nx run frontend:test
 
   build:
     needs: verify
@@ -47,6 +49,7 @@ jobs:
       packages: write
     outputs:
       backend_image: ${{ steps.images.outputs.backend_image }}
+      frontend_image: ${{ steps.images.outputs.frontend_image }}
       caddy_image: ${{ steps.images.outputs.caddy_image }}
     steps:
       - uses: actions/checkout@v4
@@ -74,6 +77,19 @@ jobs:
             ghcr.io/ashenhermit/hermit-badges-generator/backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: frontend-prod
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL || 'https://api.badges.ashen-hermit.space' }}
+          tags: |
+            ghcr.io/ashenhermit/hermit-badges-generator/frontend:sha-${{ steps.short_sha.outputs.SHORT_SHA }}
+            ghcr.io/ashenhermit/hermit-badges-generator/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Build and push caddy image
         uses: docker/build-push-action@v6
         with:
@@ -92,6 +108,7 @@ jobs:
           SHORT_SHA: ${{ steps.short_sha.outputs.SHORT_SHA }}
         run: |
           echo "backend_image=ghcr.io/ashenhermit/hermit-badges-generator/backend:sha-$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=ghcr.io/ashenhermit/hermit-badges-generator/frontend:sha-$SHORT_SHA" >> "$GITHUB_OUTPUT"
           echo "caddy_image=ghcr.io/ashenhermit/hermit-badges-generator/caddy:sha-$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
   deploy:
@@ -126,13 +143,14 @@ jobs:
         shell: bash
         env:
           BACKEND_IMAGE: ${{ needs.build.outputs.backend_image }}
+          FRONTEND_IMAGE: ${{ needs.build.outputs.frontend_image }}
           CADDY_IMAGE: ${{ needs.build.outputs.caddy_image }}
         run: |
           tmpdir=$(mktemp -d)
           trap 'rm -rf "$tmpdir"' EXIT
           {
             printf '%s\n' "$PROD_ENV"
-            printf 'BACKEND_IMAGE=%s\nCADDY_IMAGE=%s\n' "$BACKEND_IMAGE" "$CADDY_IMAGE"
+            printf 'BACKEND_IMAGE=%s\nFRONTEND_IMAGE=%s\nCADDY_IMAGE=%s\n' "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$CADDY_IMAGE"
           } | sed 's/\r$//' > "$tmpdir/.env"
           DEPLOY_PATH="$tmpdir" DEPLOY_SOURCE_ONLY=1 DRY_RUN=0 bash -c 'source scripts/deploy-remote.sh; validate_env'
 
@@ -154,11 +172,12 @@ jobs:
         shell: bash
         env:
           BACKEND_IMAGE: ${{ needs.build.outputs.backend_image }}
+          FRONTEND_IMAGE: ${{ needs.build.outputs.frontend_image }}
           CADDY_IMAGE: ${{ needs.build.outputs.caddy_image }}
         run: |
           {
             printf '%s\n' "$PROD_ENV"
-            printf 'BACKEND_IMAGE=%s\nCADDY_IMAGE=%s\n' "$BACKEND_IMAGE" "$CADDY_IMAGE"
+            printf 'BACKEND_IMAGE=%s\nFRONTEND_IMAGE=%s\nCADDY_IMAGE=%s\n' "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$CADDY_IMAGE"
           } | sed 's/\r$//' | ssh -i "$HOME/.ssh/deploy_key" -p "$SSH_PORT" \
             -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
             "$SSH_USER@$SSH_HOST" \
