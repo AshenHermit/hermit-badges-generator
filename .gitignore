@@ -4,6 +4,7 @@
 **/*.tsbuildinfo
 **/coverage/
 **/.env
+.env.prod
 *.log
 .nx/
 .worktrees/
