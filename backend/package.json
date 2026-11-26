@@ -19,6 +19,7 @@
     "@nestjs/swagger": "^11",
     "class-transformer": "^0.5",
     "class-validator": "^0.15",
+    "ioredis": "^6.1.0",
     "playwright-core": "1.65.1",
     "reflect-metadata": "^0.2",
     "rxjs": "^7.8",
