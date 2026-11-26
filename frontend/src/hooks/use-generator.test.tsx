@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { defaultValues } from "@/lib/api";
 import type { TemplateMetadata } from "@/types/template";
 import { useGenerator } from "@/hooks/use-generator";
@@ -20,35 +20,48 @@ const template: TemplateMetadata = {
 };
 
 describe("useGenerator", () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
-
-  it("starts with template defaults, png format and height 60", () => {
+  it("starts with applied defaults, png format and height 60", () => {
     const { result } = renderHook(() => useGenerator(template));
     expect(result.current.values).toEqual(defaultValues(template));
     expect(result.current.format).toBe("png");
     expect(result.current.height).toBe(60);
-  });
-
-  it("debounces parameter edits and keeps preview equal to link", () => {
-    const { result } = renderHook(() => useGenerator(template));
-    act(() => result.current.setParam("left", "Hi"));
-    act(() => vi.advanceTimersByTime(250));
-    expect(result.current.search).toContain("left=Hi");
+    expect(result.current.dirty).toBe(false);
+    expect(result.current.search).toContain("height=60");
     expect(result.current.previewUrl).toBe(result.current.linkUrl);
   });
 
-  it("debounces height edits", () => {
+  it("marks parameter edits dirty but keeps the applied URL until apply", () => {
     const { result } = renderHook(() => useGenerator(template));
-    act(() => result.current.setHeight(140));
-    act(() => vi.advanceTimersByTime(250));
-    expect(result.current.search).toContain("height=140");
+    const initialUrl = result.current.previewUrl;
+
+    act(() => result.current.setParam("left", "Hi"));
+
+    expect(result.current.dirty).toBe(true);
+    expect(result.current.previewUrl).toBe(initialUrl);
+    expect(result.current.linkUrl).toBe(initialUrl);
+
+    act(() => result.current.apply());
+
+    expect(result.current.dirty).toBe(false);
+    expect(result.current.search).toContain("left=Hi");
+    expect(result.current.previewUrl).toBe(result.current.linkUrl);
+    expect(result.current.previewUrl).not.toBe(initialUrl);
   });
 
-  it("debounces format edits and keeps preview equal to link", () => {
+  it("applies height edits only after apply", () => {
+    const { result } = renderHook(() => useGenerator(template));
+    act(() => result.current.setHeight(140));
+    expect(result.current.search).toContain("height=60");
+    act(() => result.current.apply());
+    expect(result.current.search).toContain("height=140");
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it("applies format edits and keeps preview equal to link", () => {
     const { result } = renderHook(() => useGenerator(template));
     act(() => result.current.setFormat("webp"));
-    act(() => vi.advanceTimersByTime(250));
+    expect(result.current.dirty).toBe(true);
+    act(() => result.current.apply());
     expect(result.current.search).toContain("format=webp");
     expect(result.current.previewUrl).toBe(result.current.linkUrl);
   });
@@ -57,5 +70,6 @@ describe("useGenerator", () => {
     const { result } = renderHook(() => useGenerator(null));
     expect(result.current.previewUrl).toBe("");
     expect(result.current.linkUrl).toBe("");
+    expect(result.current.dirty).toBe(false);
   });
 });

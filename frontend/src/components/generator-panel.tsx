@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 
 import type { GeneratorApi } from "@/hooks/use-generator";
 import type { TemplateMetadata } from "@/types/template";
@@ -61,6 +61,20 @@ export function GeneratorPanel({ template, generator }: GeneratorPanelProps) {
         <Button type="button" onClick={() => void copyLink()} aria-label="Copy">
           <Copy className="size-4" />
           Copy
+        </Button>
+        <Button
+          type="button"
+          onClick={generator.apply}
+          aria-label="Apply"
+          data-dirty={generator.dirty}
+          className={
+            generator.dirty
+              ? "ring-2 ring-fuchsia-400/70 shadow-[0_0_18px_rgba(232,121,249,0.65)]"
+              : "opacity-60"
+          }
+        >
+          <Check className="size-4" />
+          Apply
         </Button>
       </div>
 

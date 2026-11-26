@@ -11,9 +11,7 @@ import type {
   ParameterValues,
   TemplateMetadata,
 } from "@/types/template";
-import { useDebouncedValue } from "./use-debounced-value";
 
-const DEBOUNCE_MS = 250;
 const DEFAULT_HEIGHT = 60;
 
 export interface GeneratorApi {
@@ -23,6 +21,8 @@ export interface GeneratorApi {
   setParam: (name: string, value: string) => void;
   setFormat: (format: BadgeFormat) => void;
   setHeight: (height: number) => void;
+  dirty: boolean;
+  apply: () => void;
   previewUrl: string;
   linkUrl: string;
   search: string;
@@ -34,16 +34,26 @@ export function useGenerator(template: TemplateMetadata | null): GeneratorApi {
   );
   const [format, setFormat] = useState<BadgeFormat>("png");
   const [height, setHeight] = useState(DEFAULT_HEIGHT);
+  const [appliedSearch, setAppliedSearch] = useState(() =>
+    template
+      ? buildGenerateSearch({
+          template: template.id,
+          format: "png",
+          height: DEFAULT_HEIGHT,
+          values: defaultValues(template),
+        })
+      : "",
+  );
 
-  const rawSearch = useMemo(
+  const draftSearch = useMemo(
     () =>
       template
         ? buildGenerateSearch({ template: template.id, format, height, values })
         : "",
     [template, format, height, values],
   );
-  const search = useDebouncedValue(rawSearch, DEBOUNCE_MS);
-  const url = search ? buildAbsoluteGenerateUrl(search) : "";
+  const dirty = draftSearch !== appliedSearch;
+  const url = appliedSearch ? buildAbsoluteGenerateUrl(appliedSearch) : "";
 
   return {
     values,
@@ -54,8 +64,12 @@ export function useGenerator(template: TemplateMetadata | null): GeneratorApi {
     },
     setFormat,
     setHeight,
+    dirty,
+    apply() {
+      if (dirty) setAppliedSearch(draftSearch);
+    },
     previewUrl: url,
     linkUrl: url,
-    search,
+    search: appliedSearch,
   };
 }

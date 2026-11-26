@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { GeneratorPanel } from "@/components/generator-panel";
@@ -26,17 +26,10 @@ function Harness({ current = template }: { current?: TemplateMetadata }) {
   return <GeneratorPanel template={current} generator={generator} />;
 }
 
-function advance() {
-  act(() => {
-    vi.advanceTimersByTime(300);
-  });
-}
-
 describe("GeneratorPanel", () => {
   const writeText = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
-    vi.useFakeTimers();
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
@@ -44,7 +37,6 @@ describe("GeneratorPanel", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -57,29 +49,34 @@ describe("GeneratorPanel", () => {
     }
   });
 
-  test("changing height updates the preview URL", () => {
+  test("Apply glows after an edit and only then updates the preview URL", () => {
     render(<Harness />);
+    const apply = screen.getByRole("button", { name: "Apply" });
+    const preview = screen.getByAltText("Badge preview");
+    expect(apply).toHaveAttribute("data-dirty", "false");
+
     fireEvent.change(screen.getByLabelText("height"), { target: { value: "140" } });
-    advance();
-    expect(screen.getByAltText("Badge preview")).toHaveAttribute(
-      "src",
-      expect.stringContaining("height=140"),
-    );
+    expect(apply).toHaveAttribute("data-dirty", "true");
+    expect(apply.className).toContain("ring-");
+    expect(preview).toHaveAttribute("src", expect.stringContaining("height=60"));
+
+    fireEvent.click(apply);
+    expect(apply).toHaveAttribute("data-dirty", "false");
+    expect(preview).toHaveAttribute("src", expect.stringContaining("height=140"));
   });
 
-  test("preview src and link value stay identical after a text edit", () => {
+  test("after Apply, preview src and link value stay identical", () => {
     render(<Harness />);
     fireEvent.change(screen.getByLabelText("left"), { target: { value: "Hi There" } });
-    advance();
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     const preview = screen.getByAltText("Badge preview");
     const link = screen.getByLabelText("Generated link");
     expect(link).toHaveValue(preview.getAttribute("src"));
     expect(preview.getAttribute("src")).toContain("left=Hi+There");
   });
 
-  test("Copy writes the generated link to the clipboard", async () => {
+  test("Copy writes the generated link to the clipboard", () => {
     render(<Harness />);
-    advance();
     const link = screen.getByLabelText("Generated link");
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
     expect(writeText).toHaveBeenCalledWith((link as HTMLInputElement).value);
@@ -87,7 +84,6 @@ describe("GeneratorPanel", () => {
 });
 
 test("page shows the error and a Retry button when metadata loading fails", async () => {
-  vi.useRealTimers();
   vi.mocked(listTemplates).mockRejectedValueOnce(new Error("service offline"));
   const { default: Home } = await import("@/app/page");
   render(<Home />);
