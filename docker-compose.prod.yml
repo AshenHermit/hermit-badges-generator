@@ -69,7 +69,8 @@ services:
       - "${CADDY_PORT:-8080}:80"
     environment:
       COMMON_DOMAIN: ${COMMON_DOMAIN}
-      SERVICE_SUBDOMAIN: ${SERVICE_SUBDOMAIN:-badges}
+      SERVICE_SUBDOMAIN: ${SERVICE_SUBDOMAIN:-api.badges}
+      FRONTEND_SUBDOMAIN: ${FRONTEND_SUBDOMAIN:-badges}
       BACKEND_HOST: backend
       BACKEND_PORT: "3000"
       FRONTEND_HOST: frontend
