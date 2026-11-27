@@ -33,7 +33,9 @@ export class TemplateService {
     const html = this.read(template.file);
     const stringVariables = new Set(
       template.variables
-        .filter((variable) => variable.type === 'string')
+        .filter(
+          (variable) => variable.type === 'string' || variable.type === 'select',
+        )
         .map((variable) => variable.placeholder),
     );
     const replacements = new Map<string, string>();

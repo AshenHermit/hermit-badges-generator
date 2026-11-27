@@ -35,6 +35,7 @@ export class TemplatesController {
         ...(variable.pattern !== undefined ? { pattern: variable.pattern } : {}),
         ...(variable.min !== undefined ? { min: variable.min } : {}),
         ...(variable.max !== undefined ? { max: variable.max } : {}),
+        ...(variable.options !== undefined ? { options: variable.options } : {}),
       })),
     };
   }
