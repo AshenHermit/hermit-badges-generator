@@ -1,6 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 
-export type TemplateVariableType = 'string' | 'color' | 'integer';
+export type TemplateVariableType = 'string' | 'color' | 'integer' | 'select';
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
 
 export interface TemplateVariable {
   name: string;
@@ -13,6 +18,7 @@ export interface TemplateVariable {
   pattern?: string;
   min?: number;
   max?: number;
+  options?: SelectOption[];
 }
 
 export interface TemplateDefinition {

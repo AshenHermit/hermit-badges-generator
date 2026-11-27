@@ -5,6 +5,7 @@ import { isFreshTemplate } from '../rendering/template.service';
 import {
   RESERVED_PARAMS,
   TEMPLATE_ID_PATTERN,
+  SelectOption,
   TemplateDefinition,
   TemplateVariable,
   TemplateVariableType,
@@ -13,7 +14,7 @@ import {
 
 export const TEMPLATES_DIR = path.resolve(process.cwd(), 'assets/templates');
 
-const TYPES: TemplateVariableType[] = ['string', 'color', 'integer'];
+const TYPES: TemplateVariableType[] = ['string', 'color', 'integer', 'select'];
 const VARIABLE_NAME_PATTERN = /^[a-z][A-Za-z0-9]*$/;
 const PLACEHOLDER_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 
@@ -21,7 +22,7 @@ function fail(reason: string): Error {
   return new Error(`Invalid template manifest: ${reason}`);
 }
 
-function parseVariable(value: unknown): TemplateVariable {
+export function parseVariable(value: unknown): TemplateVariable {
   if (typeof value !== 'object' || value === null) {
     throw fail('variable must be an object');
   }
@@ -91,6 +92,39 @@ function parseVariable(value: unknown): TemplateVariable {
   }
   if (variable.type === 'color' && variable.default !== undefined) {
     normalizeColor(String(variable.default), variable.name);
+  }
+  if (variable.type === 'select') {
+    if (!Array.isArray(raw.options) || raw.options.length === 0) {
+      throw fail(`variable "${name}" requires a non-empty options array`);
+    }
+    const values = new Set<string>();
+    const options: SelectOption[] = [];
+    for (const optionRaw of raw.options) {
+      if (typeof optionRaw !== 'object' || optionRaw === null) {
+        throw fail(`variable "${name}" has an invalid option`);
+      }
+      const option = optionRaw as Record<string, unknown>;
+      if (typeof option.value !== 'string' || option.value.length === 0) {
+        throw fail(`variable "${name}" has an option with an invalid value`);
+      }
+      if (typeof option.label !== 'string' || option.label.length === 0) {
+        throw fail(`variable "${name}" has an option with an invalid label`);
+      }
+      if (values.has(option.value)) {
+        throw fail(`variable "${name}" has duplicate option value "${option.value}"`);
+      }
+      values.add(option.value);
+      options.push({ value: option.value, label: option.label });
+    }
+    variable.options = options;
+    if (
+      defaultValue !== undefined &&
+      (typeof defaultValue !== 'string' || !values.has(defaultValue))
+    ) {
+      throw fail(`variable "${name}" default must be one of the option values`);
+    }
+  } else if (raw.options !== undefined) {
+    throw fail(`variable "${name}" has options but is not a select`);
   }
   return variable;
 }
