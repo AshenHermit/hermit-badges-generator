@@ -12,6 +12,29 @@ type ImageResponse = { setHeader(name: string, value: string): unknown; send(bod
 export class GenerationController {
   constructor(private readonly generationService: GenerationService) {}
 
+  @Get('html')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @Header('Cache-Control', 'public, max-age=3600')
+  @ApiOperation({
+    summary:
+      'Get the prepared badge HTML page for iframe embedding. Template-specific query parameters are listed by GET /api/v1/templates/:id',
+  })
+  @ApiProduces('text/html')
+  @ApiResponse({
+    status: 200,
+    content: { 'text/html': { schema: { type: 'string' } } },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
+  @ApiQuery({
+    name: 'template',
+    required: false,
+    description: 'Template id (see GET /api/v1/templates)',
+    schema: { type: 'string', default: 'hermit-frame' },
+  })
+  html(@RawQuery() query: Record<string, unknown>): string {
+    return this.generationService.generateHtml(query);
+  }
+
   @Get()
   @Header('Cache-Control', 'public, max-age=3600')
   @ApiOperation({

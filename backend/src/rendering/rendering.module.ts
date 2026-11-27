@@ -6,6 +6,6 @@ import { TemplateService } from './template.service';
 
 @Module({
   providers: [TemplateService, BrowserRenderer, RendererRegistry, ImageTransformer],
-  exports: [RendererRegistry, ImageTransformer],
+  exports: [RendererRegistry, ImageTransformer, TemplateService],
 })
 export class RenderingModule {}

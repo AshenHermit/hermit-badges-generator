@@ -18,7 +18,7 @@ describe('AssetsController', () => {
     const res = fakeResponse();
     const file = path.join(root, 'fonts/Lipstick-Rage.ttf');
 
-    controller.get('fonts/Lipstick-Rage.ttf', res);
+    controller.get({ path: ['fonts', 'Lipstick-Rage.ttf'] }, res);
 
     expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'font/ttf');
     const sent = res.send.mock.calls[0][0] as Buffer;
@@ -29,7 +29,7 @@ describe('AssetsController', () => {
     const res = fakeResponse();
     const relative = 'templates/garrison-cat-badge/garrison-cat-badge-frame.png';
 
-    controller.get(relative, res);
+    controller.get({ path: relative.split('/') }, res);
 
     expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'image/png');
     const sent = res.send.mock.calls[0][0] as Buffer;
@@ -37,14 +37,14 @@ describe('AssetsController', () => {
   });
 
   it('rejects paths outside the assets directory', () => {
-    expect(() => controller.get('../package.json', fakeResponse())).toThrow(
-      NotFoundException,
-    );
+    expect(() =>
+      controller.get({ path: ['..', 'package.json'] }, fakeResponse()),
+    ).toThrow(NotFoundException);
   });
 
   it('rejects directories', () => {
     expect(() =>
-      controller.get('templates/garrison-cat-badge', fakeResponse()),
+      controller.get({ path: ['templates', 'garrison-cat-badge'] }, fakeResponse()),
     ).toThrow(NotFoundException);
   });
 });

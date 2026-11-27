@@ -62,6 +62,7 @@ describe('GenerationService', () => {
       transformer as unknown as ImageTransformer,
       manifests,
       new TemplateParamsService(),
+      templateService,
     );
   }
 

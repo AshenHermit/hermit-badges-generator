@@ -25,12 +25,21 @@ export class AssetsController {
   private readonly root = path.resolve(process.cwd(), 'assets');
 
   @Get('*path')
-  get(@Param('path') rawPath: string, @Res() res: FileResponse): void {
-    const target = path.resolve(this.root, rawPath ?? '');
+  get(
+    @Param() params: { path?: string | string[] },
+    @Res() res: FileResponse,
+  ): void {
+    const raw = params.path;
+    const segments = Array.isArray(raw)
+      ? raw
+      : typeof raw === 'string'
+        ? raw.split(/[\\/]/)
+        : [];
+    const target = path.resolve(this.root, ...segments);
     const insideRoot =
       target !== this.root && target.startsWith(this.root + path.sep);
     if (
-      !rawPath ||
+      !segments.length ||
       !insideRoot ||
       !fs.statSync(target, { throwIfNoEntry: false })?.isFile()
     ) {
