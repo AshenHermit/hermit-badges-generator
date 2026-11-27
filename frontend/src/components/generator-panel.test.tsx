@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { GeneratorPanel } from "@/components/generator-panel";
+import type { GeneratorApi } from "@/hooks/use-generator";
 import { useGenerator } from "@/hooks/use-generator";
 import { listTemplates } from "@/lib/api";
 import type { TemplateMetadata } from "@/types/template";
@@ -24,6 +25,25 @@ const template: TemplateMetadata = {
 function Harness({ current = template }: { current?: TemplateMetadata }) {
   const generator = useGenerator(current);
   return <GeneratorPanel template={current} generator={generator} />;
+}
+
+function stubGenerator(overrides: Partial<GeneratorApi> = {}): GeneratorApi {
+  const previewUrl = "http://localhost:3000/api/v1/generate?left=Hello";
+  return {
+    values: {},
+    format: "png",
+    height: 60,
+    setParam: vi.fn(),
+    setFormat: vi.fn(),
+    setHeight: vi.fn(),
+    dirty: false,
+    apply: vi.fn(),
+    previewUrl,
+    linkUrl: previewUrl,
+    iframeUrl: "http://localhost:3000/api/v1/generate/html?left=Hello",
+    search: "left=Hello",
+    ...overrides,
+  };
 }
 
 describe("GeneratorPanel", () => {
@@ -75,11 +95,48 @@ describe("GeneratorPanel", () => {
     expect(preview.getAttribute("src")).toContain("left=Hi+There");
   });
 
-  test("Copy writes the generated link to the clipboard", () => {
+  test("shows Render and IFrame tabs and embeds the HTML page", () => {
+    const generator = stubGenerator();
+    render(<GeneratorPanel template={template} generator={generator} />);
+
+    const renderTab = screen.getByRole("tab", { name: "Render" });
+    const iframeTab = screen.getByRole("tab", { name: "IFrame" });
+    expect(renderTab).toBeInTheDocument();
+    expect(iframeTab).toBeInTheDocument();
+    expect(renderTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("img", { name: "Badge preview" })).toHaveAttribute(
+      "src",
+      generator.previewUrl,
+    );
+
+    fireEvent.click(iframeTab);
+
+    const iframe = screen.getByTitle("Badge HTML preview");
+    expect(iframe.tagName).toBe("IFRAME");
+    expect(iframe).toHaveAttribute("src", generator.iframeUrl);
+  });
+
+  test("shows the empty state instead of an empty iframe src when no template is selected", () => {
+    const generator = stubGenerator({ previewUrl: "", iframeUrl: "" });
+    render(<GeneratorPanel template={null} generator={generator} />);
+
+    const iframeTab = screen.getByRole("tab", { name: "IFrame" });
+    fireEvent.click(iframeTab);
+
+    expect(screen.queryByTitle("Badge HTML preview")).not.toBeInTheDocument();
+    const panel = document.getElementById(
+      iframeTab.getAttribute("aria-controls") ?? "",
+    );
+    expect(panel).toHaveTextContent("Select a template to see a preview");
+  });
+
+  test("Copy writes the generated link to the clipboard", async () => {
     render(<Harness />);
     const link = screen.getByLabelText("Generated link");
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
-    expect(writeText).toHaveBeenCalledWith((link as HTMLInputElement).value);
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith((link as HTMLInputElement).value),
+    );
   });
 });
 

@@ -1,0 +1,2 @@
+ffmpeg -framerate 24 -i "./tmp/frames/garisson_the_badge_cat%04d.png" -vf "palettegen=reserve_transparent=1" "./tmp/palette.png"
+ffmpeg -framerate 24 -i "./tmp/frames/garisson_the_badge_cat%04d.png" -i "./tmp/palette.png" -filter_complex "paletteuse=alpha_threshold=128:dither=none" garisson_the_badge_cat.gif

@@ -3,7 +3,7 @@ import { BADGE_CACHE, BadgeCache } from '../cache/badge-cache';
 import { CacheKeyFactory } from '../cache/cache-key.factory';
 import { ImageFormat, ImageTransformer } from '../rendering/image-transformer';
 import { RendererRegistry } from '../rendering/renderer.registry';
-import { isFreshTemplate } from '../rendering/template.service';
+import { isFreshTemplate, TemplateService } from '../rendering/template.service';
 import { TemplateManifestService } from '../templates/template-manifest.service';
 import { TemplateParamsService } from '../templates/template-params.service';
 import { GenerateParams, parseGenerateParams } from './query-parser';
@@ -25,6 +25,7 @@ export class GenerationService {
     private readonly imageTransformer: ImageTransformer,
     private readonly manifests: TemplateManifestService,
     private readonly params: TemplateParamsService,
+    private readonly templates: TemplateService,
   ) {
     this.fresh = isFreshTemplate();
   }
@@ -55,6 +56,15 @@ export class GenerationService {
       await this.badgeCache.set(key, image);
     }
     return { image, format: query.format };
+  }
+
+  generateHtml(rawQuery: Record<string, unknown>): string {
+    const query = this.parse(rawQuery);
+    const definition = this.manifests.get(query.templateId);
+    return this.templates.withBase(
+      this.templates.renderHtml(definition, query.variables),
+      definition.id,
+    );
   }
 
   parse(rawQuery: Record<string, unknown>): GenerateParams {

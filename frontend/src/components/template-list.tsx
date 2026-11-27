@@ -68,7 +68,7 @@ export function TemplateList({
                     alt={`${template.id} preview`}
                     width={80}
                     height={40}
-                    className="mt-2 h-10 w-20 rounded-md object-cover"
+                    className="mt-2 h-10 w-20 rounded-md object-contain"
                   />
                 </div>
                 <Button

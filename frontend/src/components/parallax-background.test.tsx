@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render } from "@testing-library/react";
-import { beforeEach, expect, test, vi } from "vitest";
+import { renderToString } from "react-dom/server";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { ParallaxBackground } from "@/components/parallax-background";
 
 function mockMatchMedia(matches: boolean) {
@@ -33,6 +34,10 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 test("does not listen to pointer movement when reduced motion is preferred", () => {
   mockMatchMedia(true);
   const addSpy = vi.spyOn(window, "addEventListener");
@@ -50,9 +55,30 @@ test("registers and cleans up pointer movement otherwise", () => {
   const { container, unmount } = render(<ParallaxBackground />);
 
   expect(addSpy).toHaveBeenCalledWith("pointermove", expect.any(Function));
-  expect(container.querySelector("[style*='bg_1.jpg']")).toBeInTheDocument();
+  expect(container.querySelector("[style*='bg_']")).toBeInTheDocument();
 
   unmount();
   expect(removeSpy).toHaveBeenCalledWith("pointermove", expect.any(Function));
   expect(window.cancelAnimationFrame).toHaveBeenCalledWith(1);
+});
+
+test.each([
+  [0, "bg_1.webp"],
+  [0.99, "bg_2.webp"],
+])("picks background %s -> %s after mount", (random, file) => {
+  mockMatchMedia(true);
+  vi.spyOn(Math, "random").mockReturnValue(random);
+
+  const { container } = render(<ParallaxBackground />);
+
+  expect(container.querySelector(`[style*='${file}']`)).toBeInTheDocument();
+  expect(Math.random).toHaveBeenCalled();
+});
+
+test("does not inline a background during server render", () => {
+  mockMatchMedia(true);
+
+  expect(renderToString(<ParallaxBackground />)).not.toContain(
+    "background-image",
+  );
 });

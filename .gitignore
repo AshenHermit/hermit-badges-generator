@@ -10,3 +10,5 @@
 .worktrees/
 .superpowers/sdd/
 backend/assets/templates/hermit-frame/template-*.html
+/docs/assets/tmp/
+*.blend1

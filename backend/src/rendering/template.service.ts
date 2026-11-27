@@ -30,6 +30,15 @@ export class TemplateService {
   private readonly cache = new Map<string, string>();
 
   prepare(template: TemplateDefinition, values: ResolvedValues): string {
+    const tempPath = path.join(
+      path.dirname(template.file),
+      `template-${randomUUID()}.html`,
+    );
+    fs.writeFileSync(tempPath, this.renderHtml(template, values), 'utf8');
+    return tempPath;
+  }
+
+  renderHtml(template: TemplateDefinition, values: ResolvedValues): string {
     const html = this.read(template.file);
     const stringVariables = new Set(
       template.variables
@@ -48,15 +57,17 @@ export class TemplateService {
       );
     }
 
-    const prepared = html.replace(/\{\{([A-Z][A-Z0-9_]*)\}\}/g, (token, name: string) =>
+    return html.replace(/\{\{([A-Z][A-Z0-9_]*)\}\}/g, (token, name: string) =>
       replacements.has(name) ? replacements.get(name)! : token,
     );
-    const tempPath = path.join(
-      path.dirname(template.file),
-      `template-${randomUUID()}.html`,
-    );
-    fs.writeFileSync(tempPath, prepared, 'utf8');
-    return tempPath;
+  }
+
+  withBase(html: string, templateId: string): string {
+    const base = `<base href="/api/v1/assets/templates/${templateId}/">`;
+    const head = /<head\b[^>]*>/i.exec(html);
+    if (!head) return base + html;
+    const index = head.index + head[0].length;
+    return html.slice(0, index) + base + html.slice(index);
   }
 
   private read(file: string): string {

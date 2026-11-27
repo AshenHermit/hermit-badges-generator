@@ -1,0 +1,1 @@
+ffmpeg -framerate 24 -i "./tmp/frames/garisson_the_badge_cat%04d.png" -vf "scale=512:512:flags=neighbor,format=yuva420p" -c:v libvpx-vp9 -pix_fmt yuva420p -auto-alt-ref 0 -crf 20 -b:v 500k garisson_the_badge_cat_sticker.webm

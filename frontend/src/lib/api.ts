@@ -88,6 +88,10 @@ export function buildAbsoluteGenerateUrl(search: string): string {
   return `${API_BASE_URL}/api/v1/generate?${search}`;
 }
 
+export function buildAbsoluteHtmlUrl(search: string): string {
+  return `${API_BASE_URL}/api/v1/generate/html?${search}`;
+}
+
 export function buildThumbnailUrl(id: string, meta: TemplateMetadata): string {
   const search = buildGenerateSearch({
     template: id,

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  API_BASE_URL,
   buildAbsoluteGenerateUrl,
+  buildAbsoluteHtmlUrl,
   buildGenerateSearch,
   buildThumbnailUrl,
   defaultValues,
@@ -104,6 +106,14 @@ describe("buildAbsoluteGenerateUrl", () => {
   it("uses the default API base from the environment", () => {
     expect(buildAbsoluteGenerateUrl("height=60")).toBe(
       "http://localhost:3000/api/v1/generate?height=60",
+    );
+  });
+});
+
+describe("buildAbsoluteHtmlUrl", () => {
+  it("points at the HTML generation endpoint", () => {
+    expect(buildAbsoluteHtmlUrl("left=Hello")).toBe(
+      `${API_BASE_URL}/api/v1/generate/html?left=Hello`,
     );
   });
 });

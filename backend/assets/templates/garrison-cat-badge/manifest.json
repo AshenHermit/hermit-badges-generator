@@ -1,0 +1,62 @@
+{
+  "id": "garrison-cat-badge",
+  "template": "template.html",
+  "variables": [
+    {
+      "name": "left",
+      "placeholder": "LEFT",
+      "type": "string",
+      "required": true,
+      "maxLength": 32,
+      "pattern": "^[^\\p{Cc}\\p{Cf}]+$",
+      "description": "Text for the left half"
+    },
+    {
+      "name": "right",
+      "placeholder": "RIGHT",
+      "type": "string",
+      "required": true,
+      "maxLength": 32,
+      "pattern": "^[^\\p{Cc}\\p{Cf}]+$",
+      "description": "Text for the right half"
+    },
+    {
+      "name": "color",
+      "placeholder": "COLOR",
+      "type": "color",
+      "required": false,
+      "default": "#7EC17E",
+      "description": "Frame outline color"
+    },
+    {
+      "name": "textColor",
+      "placeholder": "TEXT_COLOR",
+      "type": "color",
+      "required": false,
+      "default": "#e8e6df",
+      "description": "Badge text color"
+    },
+    {
+      "name": "earsPosition",
+      "placeholder": "EARS_POSITION",
+      "type": "select",
+      "required": false,
+      "default": "left",
+      "description": "Ears position",
+      "options": [
+        {
+          "value": "left",
+          "label": "left"
+        },
+        {
+          "value": "center",
+          "label": "center"
+        },
+        {
+          "value": "right",
+          "label": "right"
+        }
+      ]
+    }
+  ]
+}

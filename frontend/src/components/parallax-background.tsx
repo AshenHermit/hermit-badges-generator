@@ -4,11 +4,18 @@ import { useEffect, useRef } from "react";
 
 const LERP_FACTOR = 0.08;
 const SHIFT_PX = 14;
+const BACKGROUND_IMAGES = ["/bg/bg_1.webp", "/bg/bg_2.webp"];
 
 export function ParallaxBackground() {
   const layerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const layer = layerRef.current;
+    if (layer) {
+      const index = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
+      layer.style.backgroundImage = `url(${BACKGROUND_IMAGES[index]})`;
+    }
+
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const target = { x: 0, y: 0 };
@@ -48,7 +55,6 @@ export function ParallaxBackground() {
       <div
         ref={layerRef}
         className="absolute -inset-[8%] scale-[1.08] bg-cover bg-center"
-        style={{ backgroundImage: "url(/bg/bg_1.jpg)" }}
       />
     </div>
   );
