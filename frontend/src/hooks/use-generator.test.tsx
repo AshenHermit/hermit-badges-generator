@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { defaultValues } from "@/lib/api";
+import { buildAbsoluteHtmlUrl, defaultValues } from "@/lib/api";
 import type { TemplateMetadata } from "@/types/template";
 import { useGenerator } from "@/hooks/use-generator";
 
@@ -28,17 +28,23 @@ describe("useGenerator", () => {
     expect(result.current.dirty).toBe(false);
     expect(result.current.search).toContain("height=60");
     expect(result.current.previewUrl).toBe(result.current.linkUrl);
+    expect(result.current.iframeUrl).toContain("/api/v1/generate/html?");
+    expect(result.current.iframeUrl).toBe(
+      buildAbsoluteHtmlUrl(result.current.search),
+    );
   });
 
   it("marks parameter edits dirty but keeps the applied URL until apply", () => {
     const { result } = renderHook(() => useGenerator(template));
     const initialUrl = result.current.previewUrl;
+    const initialIframeUrl = result.current.iframeUrl;
 
     act(() => result.current.setParam("left", "Hi"));
 
     expect(result.current.dirty).toBe(true);
     expect(result.current.previewUrl).toBe(initialUrl);
     expect(result.current.linkUrl).toBe(initialUrl);
+    expect(result.current.iframeUrl).toBe(initialIframeUrl);
 
     act(() => result.current.apply());
 
@@ -46,6 +52,10 @@ describe("useGenerator", () => {
     expect(result.current.search).toContain("left=Hi");
     expect(result.current.previewUrl).toBe(result.current.linkUrl);
     expect(result.current.previewUrl).not.toBe(initialUrl);
+    expect(result.current.iframeUrl).not.toBe(initialIframeUrl);
+    expect(result.current.iframeUrl).toBe(
+      buildAbsoluteHtmlUrl(result.current.search),
+    );
   });
 
   it("applies height edits only after apply", () => {
@@ -70,6 +80,7 @@ describe("useGenerator", () => {
     const { result } = renderHook(() => useGenerator(null));
     expect(result.current.previewUrl).toBe("");
     expect(result.current.linkUrl).toBe("");
+    expect(result.current.iframeUrl).toBe("");
     expect(result.current.dirty).toBe(false);
   });
 });

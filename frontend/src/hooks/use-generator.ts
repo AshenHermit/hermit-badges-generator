@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   buildAbsoluteGenerateUrl,
+  buildAbsoluteHtmlUrl,
   buildGenerateSearch,
   defaultValues,
 } from "@/lib/api";
@@ -25,6 +26,7 @@ export interface GeneratorApi {
   apply: () => void;
   previewUrl: string;
   linkUrl: string;
+  iframeUrl: string;
   search: string;
 }
 
@@ -70,6 +72,7 @@ export function useGenerator(template: TemplateMetadata | null): GeneratorApi {
     },
     previewUrl: url,
     linkUrl: url,
+    iframeUrl: appliedSearch ? buildAbsoluteHtmlUrl(appliedSearch) : "",
     search: appliedSearch,
   };
 }
