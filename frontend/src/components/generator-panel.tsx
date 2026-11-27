@@ -61,12 +61,21 @@ export function GeneratorPanel({ template, generator }: GeneratorPanelProps) {
             )}
           </TabsContent>
 
-          <TabsContent value="iframe" className="min-h-48 w-full">
-            <iframe
-              title="Badge HTML preview"
-              src={generator.iframeUrl}
-              className="min-h-48 w-full"
-            />
+          <TabsContent
+            value="iframe"
+            className="flex min-h-48 w-full items-center justify-center"
+          >
+            {generator.iframeUrl ? (
+              <iframe
+                title="Badge HTML preview"
+                src={generator.iframeUrl}
+                className="min-h-48 w-full"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Select a template to see a preview
+              </p>
+            )}
           </TabsContent>
         </div>
       </Tabs>

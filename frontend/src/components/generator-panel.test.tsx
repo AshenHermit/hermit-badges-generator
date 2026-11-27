@@ -116,6 +116,16 @@ describe("GeneratorPanel", () => {
     expect(iframe).toHaveAttribute("src", generator.iframeUrl);
   });
 
+  test("shows the empty state instead of an empty iframe src when no template is selected", () => {
+    const generator = stubGenerator({ previewUrl: "", iframeUrl: "" });
+    render(<GeneratorPanel template={null} generator={generator} />);
+
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "IFrame" }));
+
+    expect(screen.queryByTitle("Badge HTML preview")).not.toBeInTheDocument();
+    expect(screen.getByText("Select a template to see a preview")).toBeInTheDocument();
+  });
+
   test("Copy writes the generated link to the clipboard", async () => {
     render(<Harness />);
     const link = screen.getByLabelText("Generated link");
