@@ -9,6 +9,33 @@ import {
 } from "@/lib/api";
 import type { TemplateMetadata } from "@/types/template";
 
+const selectMeta: TemplateMetadata = {
+  id: "select-badge",
+  parameters: [
+    {
+      name: "theme",
+      placeholder: "THEME",
+      type: "select",
+      required: true,
+      options: [
+        { value: "dark", label: "Тёмная" },
+        { value: "light", label: "Светлая" },
+      ],
+    },
+    {
+      name: "density",
+      placeholder: "DENSITY",
+      type: "select",
+      required: false,
+      default: "compact",
+      options: [
+        { value: "compact", label: "Компактно" },
+        { value: "roomy", label: "Свободно" },
+      ],
+    },
+  ],
+};
+
 const meta: TemplateMetadata = {
   id: "hermit-frame",
   parameters: [
@@ -89,17 +116,24 @@ describe("buildThumbnailUrl", () => {
 
     expect(search.get("height")).toBe("40");
     expect(search.get("format")).toBe("png");
-    expect(search.get("left")).toBe("Hello");
-    expect(search.get("right")).toBe("World");
+    expect(search.get("left")).toBe("Hawoo");
+    expect(search.get("right")).toBe("Wovd");
   });
 });
 
 describe("defaultValues", () => {
   it("uses manifest defaults and sample text for required params", () => {
     expect(defaultValues(meta)).toEqual({
-      left: "Hello",
-      right: "World",
+      left: "Hawoo",
+      right: "Wovd",
       borderColor: "rgb(41,39,45)",
+    });
+  });
+
+  it("uses the first option for required selects and the default for optional ones", () => {
+    expect(defaultValues(selectMeta)).toEqual({
+      theme: "dark",
+      density: "compact",
     });
   });
 });

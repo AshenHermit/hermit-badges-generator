@@ -7,7 +7,7 @@ import type {
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
 
-const SAMPLE_VALUES: ParameterValues = { left: "Hello", right: "World" };
+const SAMPLE_VALUES: ParameterValues = { left: "Hawoo", right: "Wovd" };
 
 async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, { signal });
@@ -35,6 +35,11 @@ export function defaultValues(meta: TemplateMetadata): ParameterValues {
   const values: ParameterValues = {};
 
   for (const parameter of meta.parameters) {
+    if (parameter.type === "select") {
+      values[parameter.name] =
+        parameter.default ?? parameter.options?.[0]?.value ?? "";
+      continue;
+    }
     if (parameter.default !== undefined) {
       values[parameter.name] = parameter.default;
     } else if (parameter.required) {
@@ -83,10 +88,7 @@ export function buildAbsoluteGenerateUrl(search: string): string {
   return `${API_BASE_URL}/api/v1/generate?${search}`;
 }
 
-export function buildThumbnailUrl(
-  id: string,
-  meta: TemplateMetadata,
-): string {
+export function buildThumbnailUrl(id: string, meta: TemplateMetadata): string {
   const search = buildGenerateSearch({
     template: id,
     format: "png",
