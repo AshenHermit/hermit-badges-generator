@@ -109,7 +109,7 @@ describe("GeneratorPanel", () => {
       generator.previewUrl,
     );
 
-    fireEvent.mouseDown(iframeTab);
+    fireEvent.click(iframeTab);
 
     const iframe = screen.getByTitle("Badge HTML preview");
     expect(iframe.tagName).toBe("IFRAME");
@@ -120,10 +120,14 @@ describe("GeneratorPanel", () => {
     const generator = stubGenerator({ previewUrl: "", iframeUrl: "" });
     render(<GeneratorPanel template={null} generator={generator} />);
 
-    fireEvent.mouseDown(screen.getByRole("tab", { name: "IFrame" }));
+    const iframeTab = screen.getByRole("tab", { name: "IFrame" });
+    fireEvent.click(iframeTab);
 
     expect(screen.queryByTitle("Badge HTML preview")).not.toBeInTheDocument();
-    expect(screen.getByText("Select a template to see a preview")).toBeInTheDocument();
+    const panel = document.getElementById(
+      iframeTab.getAttribute("aria-controls") ?? "",
+    );
+    expect(panel).toHaveTextContent("Select a template to see a preview");
   });
 
   test("Copy writes the generated link to the clipboard", async () => {
