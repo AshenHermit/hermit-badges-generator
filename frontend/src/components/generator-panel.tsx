@@ -2,6 +2,12 @@
 "use client";
 
 import { CopyButton, CopyButtonIcon } from "@animate-ui/react/primitives/buttons/copy";
+import {
+  Root as Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@animate-ui/react/primitives/radix-ui/tabs";
 import { Check, Copy } from "lucide-react";
 
 import type { GeneratorApi } from "@/hooks/use-generator";
@@ -31,17 +37,39 @@ export function GeneratorPanel({ template, generator }: GeneratorPanelProps) {
         {template?.id ?? "No template selected"}
       </h1>
 
-      <div className="mt-6 flex min-h-40 items-center justify-center rounded-xl border border-white/10 bg-black/20 p-4">
-        {generator.previewUrl ? (
-          <img
-            src={generator.previewUrl}
-            alt="Badge preview"
-            className="max-h-48 w-auto max-w-full object-contain"
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">Select a template to see a preview</p>
-        )}
-      </div>
+      <Tabs defaultValue="render" className="mt-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="render">Render</TabsTrigger>
+          <TabsTrigger value="iframe">IFrame</TabsTrigger>
+        </TabsList>
+
+        <div className="mt-3 flex min-h-48 w-full items-center justify-center rounded-xl border border-white/10 bg-black/20 p-4">
+          <TabsContent
+            value="render"
+            className="flex min-h-48 w-full items-center justify-center"
+          >
+            {generator.previewUrl ? (
+              <img
+                src={generator.previewUrl}
+                alt="Badge preview"
+                className="max-h-48 w-auto max-w-full object-contain"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Select a template to see a preview
+              </p>
+            )}
+          </TabsContent>
+
+          <TabsContent value="iframe" className="min-h-48 w-full">
+            <iframe
+              title="Badge HTML preview"
+              src={generator.iframeUrl}
+              className="min-h-48 w-full"
+            />
+          </TabsContent>
+        </div>
+      </Tabs>
 
       <div className="mt-5 flex gap-2">
         <Label htmlFor="generated-link" className="sr-only">
