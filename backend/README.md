@@ -46,7 +46,8 @@ Rules:
 
 - `name` is the query parameter name (`/^[a-z][A-Za-z0-9]*$/`); `template`, `format`, and `height` are reserved.
 - `placeholder` is the `{{TOKEN}}` name (`/^[A-Z][A-Z0-9_]*$/`). String values are HTML-escaped before substitution; color and integer values are inserted after validation.
-- `type` is `string`, `color`, or `integer`. Colors accept `#RGB`, `#RRGGBB`, or `rgb(r, g, b)` and are normalized to `rgb(r, g, b)`; integers are validated against `min`/`max`.
+- `type` is `string`, `color`, `integer`, or `select`. Colors accept `#RGB`, `#RRGGBB`, or `rgb(r, g, b)` and are normalized to `rgb(r, g, b)`; integers are validated against `min`/`max`.
+- `select` requires `options`: a non-empty array of `{ "value": "...", "label": "..." }`. The query value must equal a `value`; `label` is shown in clients. `default` is a `value`.
 - `required: true` has no `default`; `required: false` must have one. Malformed manifests fail at load time.
 - Unknown query parameters are rejected with `400`.
 

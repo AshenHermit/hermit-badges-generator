@@ -1,9 +1,9 @@
 <!-- prettier-ignore -->
 <div align="center">
 
-<img src="backend/test/golden/hermit-frame.png" alt="Example Hermit frame badge" height="64" />
+<img src="docs/assets/garisson_the_badge_cat.gif" style="image-rendering: pixelated;" alt="garisson_the_badge_cat" height="200" />
 
-# hermit-badges-generator
+# Hermit Badges Generator
 
 **HTTP service that renders frame-based badges to PNG or WebP.**
 
@@ -28,7 +28,7 @@ Monorepo for the Hermit badges generator. The [`backend/`](backend/README.md) pa
 ## Features
 
 - **Frame badge rendering** — inline SVG frame with separately styled left and right halves; frame and text colors are query parameters.
-- **Manifest-driven templates** — declare variables with type (`string`, `color`, `integer`), required flag, default value, and constraints; unknown query parameters are rejected.
+- **Manifest-driven templates** — declare variables with type (`string`, `color`, `integer`, `select`), required flag, default value, and constraints; unknown query parameters are rejected. `select` parameters expose `options` with `value` and `label`; the value is submitted, the label is displayed.
 - **Template metadata API** — list template ids and fetch their parameter definitions.
 - **PNG and WebP output** — resized to any height from 1 to 1000 pixels, preserving aspect ratio.
 - **Strict input handling** — 1–32 printable characters per half, HTML-escaped before insertion into the template.
@@ -80,22 +80,22 @@ It discovers templates and their parameters through the backend API. Browser met
 
 Only `template`, `format`, and `height` are fixed parameters. All other query parameters come from the chosen template's manifest (see below).
 
-| Parameter | Required | Default        | Notes                                   |
-| --------- | -------- | -------------- | --------------------------------------- |
-| `template`| no       | `hermit-frame` | Template id; must have a `manifest.json`|
-| `format`  | no       | `png`          | `png` or `webp`                         |
-| `height`  | no       | `60`           | Integer 1–1000, output height in pixels |
+| Parameter  | Required | Default        | Notes                                    |
+| ---------- | -------- | -------------- | ---------------------------------------- |
+| `template` | no       | `hermit-frame` | Template id; must have a `manifest.json` |
+| `format`   | no       | `png`          | `png` or `webp`                          |
+| `height`   | no       | `60`           | Integer 1–1000, output height in pixels  |
 
 For `hermit-frame`, the manifest declares these variables:
 
-| Name           | Required | Default                | Type    | Notes                                        |
-| -------------- | -------- | ---------------------- | ------- | -------------------------------------------- |
-| `left`         | yes      | —                      | string  | Left-half text, 1–32 printable characters    |
-| `right`        | yes      | —                      | string  | Right-half text, 1–32 printable characters   |
-| `borderColor`  | no       | `rgb(41, 39, 45)`      | color   | Frame border                                 |
-| `leftBgColor`  | no       | `rgb(53, 52, 62)`      | color   | Left frame fill                              |
-| `rightBgColor` | no       | `rgb(140, 48, 101)`    | color   | Right frame fill                             |
-| `textColor`    | no       | `rgb(232, 230, 223)`   | color   | Badge text (`#e8e6df`)                       |
+| Name           | Required | Default              | Type   | Notes                                      |
+| -------------- | -------- | -------------------- | ------ | ------------------------------------------ |
+| `left`         | yes      | —                    | string | Left-half text, 1–32 printable characters  |
+| `right`        | yes      | —                    | string | Right-half text, 1–32 printable characters |
+| `borderColor`  | no       | `rgb(41, 39, 45)`    | color  | Frame border                               |
+| `leftBgColor`  | no       | `rgb(53, 52, 62)`    | color  | Left frame fill                            |
+| `rightBgColor` | no       | `rgb(140, 48, 101)`  | color  | Right frame fill                           |
+| `textColor`    | no       | `rgb(232, 230, 223)` | color  | Badge text (`#e8e6df`)                     |
 
 Colors accept `#RGB`, `#RRGGBB`, or `rgb(r, g, b)` (channels 0–255); they are normalized to `rgb(r, g, b)`. Named colors such as `white` are not accepted. Unknown query parameters and invalid values return `400`.
 
@@ -120,14 +120,14 @@ Returns metadata for one template: `{ "id": "hermit-frame", "parameters": [{ "na
 > [!IMPORTANT]
 > Cached results skip rendering entirely. Set `CACHE_DISABLED=true` to disable reads and writes, or `FRESH_TEMPLATE=true` to re-read the template and manifest on every generation and bypass cached images (`FRESH_MANIFEST` is an alias). Both flags are read at startup and accept `1`, `true`, or `yes` (case-insensitive).
 
-| Endpoint                       | Purpose                                     |
-| ------------------------------ | ------------------------------------------- |
-| `/api/v1/generate`             | Render a badge image                        |
-| `/api/v1/templates`            | List template ids                           |
-| `/api/v1/templates/:id`        | Get a template's query parameters           |
-| `/api/health`                  | Liveness probe — `{ "status": "ok" }`       |
-| `/api/docs`                    | Swagger UI                                  |
-| `/api/docs/json`               | OpenAPI 3.0.3 document                      |
+| Endpoint                | Purpose                               |
+| ----------------------- | ------------------------------------- |
+| `/api/v1/generate`      | Render a badge image                  |
+| `/api/v1/templates`     | List template ids                     |
+| `/api/v1/templates/:id` | Get a template's query parameters     |
+| `/api/health`           | Liveness probe — `{ "status": "ok" }` |
+| `/api/docs`             | Swagger UI                            |
+| `/api/docs/json`        | OpenAPI 3.0.3 document                |
 
 ## Configuration
 
@@ -135,28 +135,28 @@ Local development defaults live in [`backend/.env.example`](backend/.env.example
 
 ### Backend
 
-| Variable           | Default       | Purpose                                                       |
-| ------------------ | ------------- | ------------------------------------------------------------- |
-| `PORT`             | `3000`        | HTTP listen port                                              |
-| `CACHE_DRIVER`     | `memory`      | `memory` or `redis`                                           |
-| `CACHE_TTL_MS`     | `3600000`     | Entry TTL; Redis TTL is `ceil(ms / 1000)` seconds             |
-| `CACHE_MAX_ENTRIES` | `1000`        | Memory driver only                                            |
-| `CACHE_DISABLED`   | `false`       | No cache reads/writes when truthy (`1`, `true`, `yes`)         |
-| `FRESH_TEMPLATE`   | `false`       | Re-read template and manifest, bypass cache when truthy       |
-| `FRESH_MANIFEST`   | —             | Alias of `FRESH_TEMPLATE`                                     |
-| `REDIS_HOST`       | `127.0.0.1`   | Redis host (compose overrides with the service name)          |
-| `REDIS_PORT`       | `6379`        | Redis port                                                    |
-| `REDIS_PASSWORD`   | `change-me`   | Redis `requirepass` and client auth                           |
-| `REDIS_DB`         | `0`           | Redis database index                                          |
+| Variable            | Default     | Purpose                                                 |
+| ------------------- | ----------- | ------------------------------------------------------- |
+| `PORT`              | `3000`      | HTTP listen port                                        |
+| `CACHE_DRIVER`      | `memory`    | `memory` or `redis`                                     |
+| `CACHE_TTL_MS`      | `3600000`   | Entry TTL; Redis TTL is `ceil(ms / 1000)` seconds       |
+| `CACHE_MAX_ENTRIES` | `1000`      | Memory driver only                                      |
+| `CACHE_DISABLED`    | `false`     | No cache reads/writes when truthy (`1`, `true`, `yes`)  |
+| `FRESH_TEMPLATE`    | `false`     | Re-read template and manifest, bypass cache when truthy |
+| `FRESH_MANIFEST`    | —           | Alias of `FRESH_TEMPLATE`                               |
+| `REDIS_HOST`        | `127.0.0.1` | Redis host (compose overrides with the service name)    |
+| `REDIS_PORT`        | `6379`      | Redis port                                              |
+| `REDIS_PASSWORD`    | `change-me` | Redis `requirepass` and client auth                     |
+| `REDIS_DB`          | `0`         | Redis database index                                    |
 
 ### Production stack
 
-| Variable            | Default                     | Purpose                                              |
-| ------------------- | --------------------------- | ---------------------------------------------------- |
-| `REDIS_PASSWORD`    | required                    | Redis server password and backend/healthcheck auth   |
-| `COMMON_DOMAIN`     | required                    | Domain part of the Caddy site address                |
-| `SERVICE_SUBDOMAIN` | `badges`                    | Subdomain part of the Caddy site address             |
-| `CADDY_PORT`        | `8080`                      | Host port mapped to Caddy port 80                    |
+| Variable            | Default                      | Purpose                                            |
+| ------------------- | ---------------------------- | -------------------------------------------------- |
+| `REDIS_PASSWORD`    | required                     | Redis server password and backend/healthcheck auth |
+| `COMMON_DOMAIN`     | required                     | Domain part of the Caddy site address              |
+| `SERVICE_SUBDOMAIN` | `badges`                     | Subdomain part of the Caddy site address           |
+| `CADDY_PORT`        | `8080`                       | Host port mapped to Caddy port 80                  |
 | `BACKEND_IMAGE`     | `ghcr.io/.../backend:latest` | Backend image reference                            |
 | `CADDY_IMAGE`       | `ghcr.io/.../caddy:latest`   | Caddy image reference                              |
 
