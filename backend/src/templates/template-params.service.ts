@@ -4,6 +4,7 @@ import {
   invalid,
   normalizeColor,
   normalizeInteger,
+  normalizeSelect,
   normalizeString,
 } from './template-definition';
 
@@ -42,6 +43,9 @@ export class TemplateParamsService {
           break;
         case 'integer':
           values[variable.name] = String(normalizeInteger(supplied, variable));
+          break;
+        case 'select':
+          values[variable.name] = normalizeSelect(supplied, variable);
           break;
       }
     }

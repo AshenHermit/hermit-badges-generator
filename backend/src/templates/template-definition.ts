@@ -111,6 +111,16 @@ export function normalizeInteger(
   return value;
 }
 
+export function normalizeSelect(
+  raw: string,
+  variable: TemplateVariable,
+): string {
+  if (!variable.options?.some((option) => option.value === raw)) {
+    throw invalid(variable.name, 'must be one of the allowed options');
+  }
+  return raw;
+}
+
 export function invalid(field: string, reason: string): BadRequestException {
   return new BadRequestException(`${field}: ${reason}`);
 }
