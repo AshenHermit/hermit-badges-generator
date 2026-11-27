@@ -75,11 +75,13 @@ describe("GeneratorPanel", () => {
     expect(preview.getAttribute("src")).toContain("left=Hi+There");
   });
 
-  test("Copy writes the generated link to the clipboard", () => {
+  test("Copy writes the generated link to the clipboard", async () => {
     render(<Harness />);
     const link = screen.getByLabelText("Generated link");
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
-    expect(writeText).toHaveBeenCalledWith((link as HTMLInputElement).value);
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith((link as HTMLInputElement).value),
+    );
   });
 });
 

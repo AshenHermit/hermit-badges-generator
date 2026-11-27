@@ -84,3 +84,29 @@
 @utility glass-panel {
   @apply rounded-2xl border border-white/10 bg-black/25 backdrop-blur-xl;
 }
+
+@layer utilities {
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    border-radius: 100vh;
+    background: #2e2e2e;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #6b6b6b;
+    border-radius: 100vh;
+    border: 3px solid #6b6b6b;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #6b6b6b;
+  }
+
+  .windows [data-slot="card"], .windows [data-slot="tabs-list"] {
+    @apply backdrop-blur-lg bg-black/20;
+  }
+}

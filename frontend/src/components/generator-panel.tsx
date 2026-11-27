@@ -1,11 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { CopyButton, CopyButtonIcon } from "@animate-ui/react/primitives/buttons/copy";
 import { Check, Copy } from "lucide-react";
 
 import type { GeneratorApi } from "@/hooks/use-generator";
 import type { TemplateMetadata } from "@/types/template";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,11 +25,6 @@ export interface GeneratorPanelProps {
 }
 
 export function GeneratorPanel({ template, generator }: GeneratorPanelProps) {
-  async function copyLink() {
-    if (!generator.linkUrl) return;
-    await navigator.clipboard.writeText(generator.linkUrl);
-  }
-
   return (
     <GlassPanel className="min-w-0 flex-1 p-5 sm:p-7">
       <h1 className="text-center text-lg font-medium tracking-wide">
@@ -58,10 +54,17 @@ export function GeneratorPanel({ template, generator }: GeneratorPanelProps) {
           value={generator.linkUrl}
           className="min-w-0 flex-1 font-mono text-xs"
         />
-        <Button type="button" onClick={() => void copyLink()} aria-label="Copy">
-          <Copy className="size-4" />
-          Copy
-        </Button>
+        <CopyButton
+          type="button"
+          content={generator.linkUrl}
+          aria-label="Copy"
+          className={buttonVariants()}
+        >
+          <CopyButtonIcon
+            icon={<Copy className="size-4" />}
+            copiedIcon={<Check className="size-4" />}
+          />
+        </CopyButton>
         <Button
           type="button"
           onClick={generator.apply}
