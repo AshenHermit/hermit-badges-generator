@@ -1,4 +1,4 @@
-export type ParameterType = "string" | "color" | "integer";
+export type ParameterType = "string" | "color" | "integer" | "select";
 
 export interface TemplateParameter {
   name: string;
@@ -9,6 +9,7 @@ export interface TemplateParameter {
   maxLength?: number;
   pattern?: string;
   description?: string;
+  options?: { value: string; label: string }[];
 }
 
 export interface TemplateMetadata {

@@ -3,6 +3,13 @@
 import { ColorPicker } from "@/components/reui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { TemplateParameter } from "@/types/template";
 
 export interface ParameterFieldProps {
@@ -20,7 +27,20 @@ export function ParameterField({ parameter, value, onChange }: ParameterFieldPro
       <Label id={labelId} htmlFor={parameter.type === "color" ? undefined : inputId}>
         {parameter.name}
       </Label>
-      {parameter.type === "color" ? (
+      {parameter.type === "select" ? (
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger id={inputId} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(parameter.options ?? []).map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : parameter.type === "color" ? (
         <ColorPicker
           format="hex"
           value={value || null}
